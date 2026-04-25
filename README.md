@@ -1,3 +1,4 @@
+
 # Lightbulb AI
 
 Lightbulb AI 是一个本地部署的 AI 创作辅助网站，提供灵感提示、角色生图、角色三视图、海报生成等 AI 驱动的创作功能。
@@ -187,3 +188,4 @@ d:/comfyui/win32-x64/lightbulb-AI/
 ## License
 
 MIT License
+>>>>>>> 4ecd04bb4d6193a160064bda4d23f07965118bff

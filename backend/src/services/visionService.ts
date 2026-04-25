@@ -41,7 +41,14 @@ export async function analyzeImage(
   console.log('[Model]', VISION_MODEL);
   console.log('[Endpoint]', VISION_ENDPOINT);
   console.log('[Image Size]', (imageBase64.length / 1024).toFixed(2), 'KB');
+  console.log('[API Key Prefix]', config.apiKey?.substring(0, 8) + '...');
+  console.log('[Max Tokens]', 2000);
+  console.log('[Temperature]', 0.3);
+  console.log('[Detail]', 'high');
+  console.log('[Request Time]', new Date().toISOString());
   console.log('======================================================\n');
+  
+  const requestStartTime = Date.now();
 
   const response = await client.chat.completions.create({
     model: VISION_MODEL,
@@ -64,12 +71,22 @@ export async function analyzeImage(
     temperature: 0.3,
   });
 
+  const requestDuration = Date.now() - requestStartTime;
+
   const content = response.choices[0]?.message?.content || '{}';
   const tokenUsage = response.usage?.total_tokens || 0;
+  const responseId = response.id;
+  const modelUsed = response.model;
+  const finishReason = response.choices[0]?.finish_reason;
   
   console.log('\n========== Vision API Response ==========');
+  console.log('[Response ID]', responseId);
+  console.log('[Model Used]', modelUsed);
+  console.log('[Finish Reason]', finishReason);
   console.log('[Token Used]', tokenUsage);
-  console.log('[Content Preview]', content.substring(0, 200) + '...');
+  console.log('[Request Duration]', requestDuration + 'ms');
+  console.log('[Content Length]', content.length, 'chars');
+  console.log('[Content Preview]', content.substring(0, 300) + (content.length > 300 ? '...' : ''));
   console.log('========================================\n');
 
   let result: VisionAnalysisResult;

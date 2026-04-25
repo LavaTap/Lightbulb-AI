@@ -12,8 +12,15 @@ export async function generateImage(
   console.log('[Provider]', config.provider);
   console.log('[Model]', model);
   console.log('[Size]', size);
+  console.log('[API Key Prefix]', config.apiKey?.substring(0, 8) + '...');
+  console.log('[Endpoint]', config.useProxy ? config.proxyEndpoint : config.endpoint);
+  console.log('[Use Proxy]', config.useProxy);
+  console.log('[Prompt Length]', prompt.length, 'chars');
   console.log('[Prompt]', prompt.substring(0, 300) + (prompt.length > 300 ? '...' : ''));
+  console.log('[Request Time]', new Date().toISOString());
   console.log('============================================\n');
+  
+  const requestStartTime = Date.now();
 
   // 判断是否使用阿里云 qwen-image 模型
   if (model.startsWith('qwen-image')) {
@@ -34,9 +41,14 @@ export async function generateImage(
   const imageBase64 = response.data[0]?.b64_json || '';
   const estimatedTokens = Math.ceil(prompt.length / 4);
   
+  const requestDuration = Date.now() - requestStartTime;
+  
   console.log('\n========== Image Generation Response ==========');
+  console.log('[Model]', model);
   console.log('[Image Size]', (imageBase64.length / 1024).toFixed(2), 'KB');
   console.log('[Estimated Tokens]', estimatedTokens);
+  console.log('[Duration]', requestDuration + 'ms');
+  console.log('[Response Time]', new Date().toISOString());
   console.log('==============================================\n');
 
   return {
