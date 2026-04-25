@@ -1,0 +1,314 @@
+import { useState, useEffect } from 'react';
+import { Trash2, Sparkles, Wand2, Image, FileImage, Loader2, X, Download, Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { recordsApi } from '@/services/api';
+import { formatRelativeTime, formatTokens, base64ToDataUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import type { GenerationRecord } from '@/types';
+
+interface RecordsPageProps {
+  embedded?: boolean;
+}
+
+const FEATURE_ICONS: Record<string, React.ReactNode> = {
+  inspiration: <Sparkles className="w-4 h-4" />,
+  character: <Wand2 className="w-4 h-4" />,
+  threeview: <Image className="w-4 h-4" />,
+  poster: <FileImage className="w-4 h-4" />,
+};
+
+const FEATURE_LABELS: Record<string, string> = {
+  inspiration: '灵感提示',
+  character: '角色生图',
+  threeview: '角色三视图',
+  poster: '海报生成',
+};
+
+const VIEW_LABELS = ['正面', '侧面', '背面'];
+
+export function RecordsPage({ embedded }: RecordsPageProps) {
+  const [records, setRecords] = useState<GenerationRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedRecord, setSelectedRecord] = useState<GenerationRecord | null>(null);
+
+  useEffect(() => {
+    loadRecords();
+  }, [page]);
+
+  const loadRecords = async () => {
+    setLoading(true);
+    try {
+      const response = await recordsApi.getAll(page, 20);
+      setRecords(response.data.records);
+      setTotalPages(response.data.totalPages);
+    } catch (error) {
+      console.error('Failed to load records:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await recordsApi.delete(id);
+      setRecords(records.filter(r => r.id !== id));
+      if (selectedRecord?.id === id) {
+        setSelectedRecord(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete record:', error);
+    }
+  };
+
+  const handleDownload = (base64: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = base64ToDataUrl(base64);
+    link.download = filename;
+    link.click();
+  };
+
+  const formatPrompt = (prompt: string | undefined): string => {
+    if (!prompt) return '';
+    try {
+      const parsed = JSON.parse(prompt);
+      // If it's inspiration analysis result, format nicely
+      if (parsed.analysis) {
+        return parsed.analysis.zh || parsed.analysis.en || '';
+      }
+    } catch {
+      // Just return as-is
+    }
+    return prompt;
+  };
+
+  return (
+    <>
+      <div className={cn("space-y-4", embedded ? 'overflow-y-auto max-h-[60vh] p-1' : 'max-w-4xl mx-auto px-4 py-8')}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">历史记录</h2>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                上一页
+              </Button>
+              <span className="text-sm text-gray-500">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                下一页
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+          </div>
+        ) : records.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-gray-500">
+              暂无生成记录
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {records.map((record) => (
+              <Card key={record.id} className="group hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    {/* Thumbnail */}
+                    {record.generatedImages && (
+                      <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 cursor-pointer hover:ring-2 hover:ring-primary-500" onClick={() => setSelectedRecord(record)}>
+                        <img
+                          src={base64ToDataUrl(record.generatedImages.split(',')[0])}
+                          alt="Generated"
+                          className="w-full h-full object-cover"
+                        />
+                        {record.generatedImages.includes(',') && (
+                          <div className="absolute bottom-0 right-0 bg-black/50 text-white text-xs px-1 rounded-tl">
+                            +{record.generatedImages.split(',').length - 1}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 text-xs">
+                          {FEATURE_ICONS[record.featureType]}
+                          {FEATURE_LABELS[record.featureType] || record.featureType}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatRelativeTime(record.createdAt)}
+                        </span>
+                      </div>
+                      
+                      {record.prompt && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2">
+                          {formatPrompt(record.prompt).substring(0, 100)}
+                          {formatPrompt(record.prompt).length > 100 ? '...' : ''}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>{record.modelProvider}</span>
+                        <span>{record.modelName}</span>
+                        <span>Token: {formatTokens(record.tokenUsage)}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {record.generatedImages && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedRecord(record)}
+                          className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(record.id)}
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h3 className="text-lg font-semibold">
+                {FEATURE_LABELS[selectedRecord.featureType] || selectedRecord.featureType} - 详情
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedRecord(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)] space-y-4">
+              {/* Generated Images */}
+              {selectedRecord.generatedImages && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">
+                      {selectedRecord.featureType === 'threeview' ? '生成图片（三视图）' : '生成图片'}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const images = selectedRecord.generatedImages!.split(',');
+                        if (images.length === 1) {
+                          handleDownload(images[0], 'generated.png');
+                        } else {
+                          // For multiple images, download each
+                          images.forEach((img, i) => {
+                            handleDownload(img, `generated-${i + 1}.png`);
+                          });
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      下载
+                    </Button>
+                  </div>
+                  <div className={selectedRecord.generatedImages.includes(',') ? 'grid grid-cols-3 gap-2' : ''}>
+                    {selectedRecord.generatedImages.split(',').map((img, i) => (
+                      <div key={i} className="relative">
+                        <img
+                          src={base64ToDataUrl(img)}
+                          alt={`Generated ${i + 1}`}
+                          className="w-full rounded-lg"
+                        />
+                        {selectedRecord.generatedImages.includes(',') && (
+                          <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
+                            {VIEW_LABELS[i] || `图片${i + 1}`}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Image */}
+              {selectedRecord.uploadImages && (
+                <div>
+                  <span className="text-sm font-medium block mb-2">参考图片</span>
+                  <img
+                    src={base64ToDataUrl(selectedRecord.uploadImages)}
+                    alt="Upload"
+                    className="max-h-48 rounded-lg"
+                  />
+                </div>
+              )}
+
+              {/* Prompt */}
+              {selectedRecord.prompt && (
+                <div>
+                  <span className="text-sm font-medium block mb-2">提示词</span>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm whitespace-pre-wrap">
+                    {formatPrompt(selectedRecord.prompt)}
+                  </div>
+                </div>
+              )}
+
+              {/* Meta Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">服务商</span>
+                  <p className="font-medium">{selectedRecord.modelProvider}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">模型</span>
+                  <p className="font-medium">{selectedRecord.modelName}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Token消耗</span>
+                  <p className="font-medium">{formatTokens(selectedRecord.tokenUsage)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">生成时间</span>
+                  <p className="font-medium">{new Date(selectedRecord.createdAt).toLocaleString('zh-CN')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

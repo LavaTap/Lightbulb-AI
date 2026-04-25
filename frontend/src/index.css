@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: 255 255 255;
+  --bg-secondary: 241 245 249;
+  --text-primary: 15 23 42;
+  --text-secondary: 100 116 139;
+}
+
+.dark {
+  --bg-primary: 15 23 42;
+  --bg-secondary: 30 41 59;
+  --text-primary: 248 250 252;
+  --text-secondary: 148 163 184;
+}
+
+body {
+  @apply bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))];
+  @apply transition-colors duration-200;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-primary-500 to-indigo-500 bg-clip-text text-transparent;
+}
