@@ -15,6 +15,7 @@ export interface GenerateImageRequest {
   prompt: string;
   config: APIConfig;
   size?: '1024x1024' | '1024x1792' | '1792x1024';
+  referenceImage?: string;  // 可选参考图 base64，用于图生图
 }
 
 export interface GenerateImageResponse {

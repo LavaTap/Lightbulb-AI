@@ -23,6 +23,7 @@ export const generateImageSchema = z.object({
     proxyEndpoint: z.string().optional(),
   }),
   size: z.enum(['1024x1024', '1024x1792', '1792x1024']).optional(),
+  referenceImage: z.string().optional(),  // 可选参考图 base64，用于图生图
 });
 
 export const generatePosterSchema = z.object({

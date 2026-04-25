@@ -4,7 +4,8 @@ import type { APIConfig } from '../types/index.js';
 export async function generateImage(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024' = '1024x1024'
+  size: '1024x1024' | '1024x1792' | '1792x1024' = '1024x1024',
+  referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const model = config.model || 'dall-e-3';
   
@@ -15,6 +16,7 @@ export async function generateImage(
   console.log('[API Key Prefix]', config.apiKey?.substring(0, 8) + '...');
   console.log('[Endpoint]', config.useProxy ? config.proxyEndpoint : config.endpoint);
   console.log('[Use Proxy]', config.useProxy);
+  console.log('[Has Reference Image]', !!referenceImage, referenceImage ? `(${(referenceImage.length / 1024).toFixed(2)} KB)` : '');
   console.log('[Prompt Length]', prompt.length, 'chars');
   console.log('[Prompt]', prompt.substring(0, 300) + (prompt.length > 300 ? '...' : ''));
   console.log('[Request Time]', new Date().toISOString());
@@ -24,7 +26,7 @@ export async function generateImage(
 
   // 判断是否使用阿里云 qwen-image 模型
   if (model.startsWith('qwen-image')) {
-    return await generateQwenImage(prompt, config, size);
+    return await generateQwenImage(prompt, config, size, referenceImage);
   }
 
   // 使用标准的 OpenAI Images API（如 DALL-E）
@@ -63,7 +65,8 @@ export async function generateImage(
 async function generateQwenImage(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024'
+  size: '1024x1024' | '1024x1792' | '1792x1024',
+  referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   // 映射尺寸
   const sizeMap: Record<string, string> = {
@@ -74,6 +77,22 @@ async function generateQwenImage(
   
   const imageSize = sizeMap[size] || '2048*2048';
   
+  // 构建消息内容
+  const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+  
+  // 如果有参考图，添加到消息开头
+  if (referenceImage) {
+    content.push({
+      type: 'image_url',
+      image_url: {
+        url: `data:image/jpeg;base64,${referenceImage}`
+      }
+    });
+  }
+  
+  // 添加文本提示词
+  content.push({ type: 'text', text: prompt });
+  
   // 构建请求体
   const requestBody = {
     model: config.model,
@@ -81,16 +100,14 @@ async function generateQwenImage(
       messages: [
         {
           role: 'user',
-          content: [
-            { text: prompt }
-          ]
+          content: content
         }
       ]
     },
     parameters: {
       size: imageSize,
       n: 1,
-      prompt_extend: true,
+      prompt_extend: referenceImage ? false : true,  // 有参考图时禁用提示词扩展
       watermark: false
     }
   };
@@ -99,7 +116,14 @@ async function generateQwenImage(
 
   // 调用阿里云 API
   const baseURL = config.endpoint || 'https://dashscope.aliyuncs.com/api/v1';
-  const response = await fetch(`${baseURL}/services/aigc/multimodal-generation/generation`, {
+  // 检测 endpoint 是否已经包含完整路径
+  const fullPath = baseURL.includes('/services/aigc/') 
+    ? baseURL 
+    : `${baseURL}/services/aigc/multimodal-generation/generation`;
+  
+  console.log('[Qwen API URL]', fullPath);
+  
+  const response = await fetch(fullPath, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

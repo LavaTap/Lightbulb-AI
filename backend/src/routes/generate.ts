@@ -52,7 +52,7 @@ router.post('/vision/analyze', async (req: Request, res: Response, next: NextFun
 // Image generate endpoint
 router.post('/image/generate', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { prompt, config, size } = generateImageSchema.parse(req.body);
+    const { prompt, config, size, referenceImage } = generateImageSchema.parse(req.body);
     
     console.log('[Image Generate] Starting...');
     console.log('[Config]', JSON.stringify({
@@ -62,8 +62,9 @@ router.post('/image/generate', async (req: Request, res: Response, next: NextFun
       hasApiKey: !!config.apiKey,
       useProxy: config.useProxy
     }));
+    console.log('[Has Reference Image]', !!referenceImage, referenceImage ? `(${(referenceImage.length / 1024).toFixed(2)} KB)` : '');
     
-    const { imageBase64, tokenUsage } = await generateImage(prompt, config, size);
+    const { imageBase64, tokenUsage } = await generateImage(prompt, config, size, referenceImage);
     
     res.json({
       success: true,

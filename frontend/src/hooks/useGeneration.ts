@@ -9,7 +9,7 @@ interface UseGenerationReturn {
   error: string | null;
   analyze: (imageBase64: string) => Promise<VisionAnalysisResult>;
   generate: (prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024') => Promise<string>;
-  generateThreeView: (referenceImage: string, analysisPrompt: string) => Promise<string[]>;
+  generateThreeView: (referenceImage: string, analysisPrompt: string, userPrompt?: string) => Promise<string[]>;
   generatePoster: (images: string[], prompt: string) => Promise<string>;
   clearError: () => void;
 }
@@ -108,7 +108,8 @@ export function useGeneration(): UseGenerationReturn {
 
   const generateThreeView = useCallback(async (
     referenceImage: string,
-    analysisPrompt: string
+    analysisPrompt: string,
+    userPrompt?: string
   ): Promise<string[]> => {
     setIsLoading(true);
     setError(null);
@@ -128,9 +129,17 @@ export function useGeneration(): UseGenerationReturn {
       // Compress reference image for storage
       const compressedRef = await compressImageAsBase64(referenceImage, 200, 0.7);
       
+      // 使用用户输入的提示词优先，否则使用AI分析结果
+      const basePrompt = userPrompt?.trim() || analysisPrompt;
+      
       for (const view of views) {
-        const prompt = `${analysisPrompt}, ${view}, character design sheet`;
-        const response = await imageApi.generate({ prompt, config, size: '1024x1024' });
+        const prompt = `${basePrompt}, ${view}, character design sheet`;
+        const response = await imageApi.generate({ 
+          prompt, 
+          config, 
+          size: '1024x1024',
+          referenceImage: referenceImage  // 传入参考图支持图生图
+        });
         images.push(response.data.imageBase64);
         totalTokenUsage += response.tokenUsage;
       }
@@ -141,7 +150,7 @@ export function useGeneration(): UseGenerationReturn {
       
       await saveRecord({
         featureType: 'threeview',
-        prompt: analysisPrompt,
+        prompt: basePrompt,
         uploadImages: compressedRef,
         generatedImages: compressed.join(','),
         modelProvider: provider,

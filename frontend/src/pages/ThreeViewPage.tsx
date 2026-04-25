@@ -13,6 +13,7 @@ export function ThreeViewPage() {
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisPrompt, setAnalysisPrompt] = useState('');
+  const [userPrompt, setUserPrompt] = useState('');  // 用户自定义提示词
   
   const { isLoading, error, analyze, generateThreeView } = useGeneration();
 
@@ -21,13 +22,17 @@ export function ThreeViewPage() {
     
     setAnalyzing(true);
     try {
-      const result = await analyze(referenceImage[0]);
-      const prompt = result.analysis.en;
-      setAnalysisPrompt(prompt);
-      
-      // Use the new generateThreeView function
-      const images = await generateThreeView(referenceImage[0], prompt);
-      setGeneratedImages(images);
+      // 如果有用户输入的提示词，直接使用；否则先分析画风
+      if (userPrompt.trim()) {
+        const images = await generateThreeView(referenceImage[0], analysisPrompt, userPrompt);
+        setGeneratedImages(images);
+      } else {
+        const result = await analyze(referenceImage[0]);
+        const prompt = result.analysis.en;
+        setAnalysisPrompt(prompt);
+        const images = await generateThreeView(referenceImage[0], prompt, '');
+        setGeneratedImages(images);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -63,22 +68,43 @@ export function ThreeViewPage() {
             onImagesChange={setReferenceImage}
             multiple={false}
           />
-          
-          <div className="mt-4 flex justify-end">
-            <Button
-              onClick={handleAnalyzeAndGenerate}
-              disabled={referenceImage.length === 0 || isLoading}
-            >
-              {isLoading || analyzing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Wand2 className="w-4 h-4 mr-2" />
-              )}
-              生成三视图
-            </Button>
-          </div>
         </CardContent>
       </Card>
+
+      {/* User Custom Prompt Input */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">自定义提示词（可选）</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            value={userPrompt}
+            onChange={(e) => setUserPrompt(e.target.value)}
+            placeholder="输入你想要的三视图描述，如：银发红瞳的女战士，穿着华丽的盔甲...（留空则使用AI分析结果）"
+            className="min-h-[80px]"
+          />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            提示：你可以同时上传参考图 + 输入提示词，AI会结合两者生成更符合预期的三视图
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Generate Button */}
+      <div className="flex justify-center">
+        <Button
+          onClick={handleAnalyzeAndGenerate}
+          disabled={referenceImage.length === 0 || isLoading}
+          size="lg"
+          className="px-8"
+        >
+          {isLoading || analyzing ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Wand2 className="w-4 h-4 mr-2" />
+          )}
+          生成三视图
+        </Button>
+      </div>
 
       {/* Error Message */}
       {error && (
