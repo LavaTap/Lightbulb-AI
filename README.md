@@ -12,10 +12,10 @@ Lightbulb AI 是一个本地部署的 AI 创作辅助网站，提供灵感提示
 用户在文本框中输入提示词，选择已配置的 AI 模型，调用 OpenAI DALL-E / GPT-Image 生成图片。
 
 ### 3. 角色三视图
-用户上传角色参考图，系统分析画风后生成正面/侧面/背面三张图。
+用户上传角色参考图，系统分析画风后生成正面/侧面/背面三张图，输出尺寸锁定为 **16:9** 横向宽屏比例。
 
 ### 4. 海报生成
-用户上传角色参考图（必填）+ 海报参考图（选填）+ 输入提示词，系统生成海报。
+用户上传角色参考图（必填）+ 海报参考图（选填）+ 输入提示词，系统生成海报，支持选择 **竖版 (9:16)** 或 **横版 (16:9)** 尺寸。
 
 ### 5. CG 生成
 功能占位，敬请期待。
@@ -51,13 +51,14 @@ npm install
 
 1. 打开前端应用
 2. 点击右上角头像下拉菜单
-3. 选择"模型配置"
-4. 选择服务商（如 OpenAI）
-5. 输入 API Key 和模型名称
-6. 点击"测试连接"验证
-7. 保存配置
+3. 选择"模型管理"
+4. 点击"添加新配置"标签页
+5. 输入配置名称、选择服务商、输入 API Key 和模型名称
+6. （可选）点击"测试连接"验证 API 连通性
+7. （可选）点击"检测 Vision 能力"检查模型是否支持多模态
+8. 点击"保存到模型管理"
 
-**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞、自定义），随时在模型配置弹窗中切换使用。
+**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞、自定义），支持真实 API 连通性检测和 Vision 能力识别。模型类型会根据所选模型自动识别。
 
 ### 启动开发服务器
 
@@ -73,7 +74,6 @@ npm run dev
 
 访问 http://localhost:3000 查看应用。
 
-
 ## API 接口
 
 ### 后端 API
@@ -81,26 +81,41 @@ npm run dev
 | 接口 | 方法 | 说明 |
 | --- | --- | --- |
 | `/api/vision/analyze` | POST | Vision LLM 分析图片 |
-| `/api/image/generate` | POST | DALL-E 图片生成 |
+| `/api/image/generate` | POST | 图片生成 |
 | `/api/poster/generate` | POST | 海报生成 |
 | `/api/records` | GET | 获取生成记录 |
 | `/api/records` | POST | 创建生成记录 |
 | `/api/records/:id` | DELETE | 删除生成记录 |
+| `/api/model-configs` | GET | 获取所有模型配置 |
+| `/api/model-configs` | POST | 创建模型配置 |
+| `/api/model-configs/:id` | PUT | 更新模型配置 |
+| `/api/model-configs/:id` | DELETE | 删除模型配置 |
+| `/api/model-configs/test-connection` | POST | 测试 API 连通性 |
+| `/api/model-configs/detect-vision` | POST | 检测 Vision 多模态能力 |
 | `/health` | GET | 健康检查 |
 
 ## 数据存储
 
-- **API Key**: 存储于前端 localStorage，不经过后端
-- **生成记录**: SQLite 数据库（位于 `backend/data/lightbulb.db`）
+- **API Key**: 存储于前端 localStorage，同时持久化到 SQLite 数据库
+- **模型配置**: SQLite 数据库（位于 `backend/data/lightbulb.db`），支持完整的 CRUD 操作
+- **生成记录**: SQLite 数据库
 - **主题偏好**: localStorage
 
-## 支持的 AI 服务商
+## 支持的 AI 服务商和模型
 
-- OpenAI (GPT-4V, DALL-E 3, GPT-Image)
-- DeepSeek
-- Google Gemini
-- 讯飞
-- 自定义 API 端点
+### 多模态模型 (Vision)
+- **OpenAI**: GPT-4o, GPT-4o Mini
+- **Google Gemini**: Gemini 2.0 Flash, Gemini 2.5 Pro, Gemini 1.5 Flash
+- **讯飞**: Qwen-VL-Plus, Qwen-VL-Max
+
+### 文生图模型
+- **OpenAI**: DALL-E 3, GPT Image 1
+- **Google Gemini**: Imagen 3
+- **讯飞**: Qwen-Image
+
+### 图生图模型
+- **OpenAI**: GPT Image 1
+- **讯飞**: Wanx
 
 ## 构建生产版本
 
@@ -119,73 +134,64 @@ npm run build
 1. API Key 安全：请勿将 API Key 提交到代码仓库
 2. 额度消耗：使用 AI 功能会产生 API 调用费用
 3. 图片大小：建议上传小于 10MB 的图片以优化处理速度
+4. 模型配置：模型类型会根据所选模型自动识别，保存前不强制要求测试连接
 
 ## 目录结构
 
 ```
-d:/comfyui/win32-x64/lightbulb-AI/
-├── frontend/                          # [NEW] React 前端项目
-│   ├── index.html                     # [NEW] Vite 入口 HTML
-│   ├── package.json                   # [NEW] 前端依赖配置
-│   ├── vite.config.ts                 # [NEW] Vite 构建配置（代理后端 API）
-│   ├── tailwind.config.js             # [NEW] Tailwind CSS 配置（darkMode: 'class'）
-│   ├── postcss.config.js              # [NEW] PostCSS 配置
-│   ├── tsconfig.json                  # [NEW] TypeScript 配置
+d:/Program Files (x86)/lightbulb-AI/
+├── frontend/                          # React 前端项目
 │   ├── src/
-│   │   ├── main.tsx                   # [NEW] React 入口文件（挂载 App，初始化主题）
-│   │   ├── App.tsx                    # [NEW] 根组件，React Router 路由配置
-│   │   ├── index.css                  # [NEW] 全局样式，CSS 变量定义，Tailwind 指令
 │   │   ├── components/
-│   │   │   ├── Layout.tsx             # [NEW] 全局布局（顶栏 + 内容区 + 页脚）
-│   │   │   ├── Header.tsx             # [NEW] 顶部导航栏（Logo + 功能导航标签 + 头像按钮）
-│   │   │   ├── AvatarMenu.tsx         # [NEW] 右上角头像下拉菜单组件（模型配置/生成记录/主题切换）
-│   │   │   ├── ThemeToggle.tsx        # [NEW] 暗色/亮色主题切换按钮（太阳/月亮图标动画）
-│   │   │   ├── ModelSelector.tsx      # [NEW] 模型选择弹窗（读取 localStorage 已配置模型）
-│   │   │   ├── ImageUploadZone.tsx    # [NEW] 通用图片拖拽上传组件（支持单张/多张，预览缩略图）
-│   │   │   └── ui/                   # [NEW] shadcn/ui 组件（button, card, dialog, toast 等）
+│   │   │   ├── ModelSelector.tsx      # [重构] 模型管理弹窗（支持真实API检测和Vision检测）
+│   │   │   ├── ModelDropdown.tsx      # [新增] 页面顶部模型下拉选择器
+│   │   │   ├── AvatarMenu.tsx        # [更新] "模型配置" → "模型管理"
+│   │   │   └── ui/                   # shadcn/ui 组件
 │   │   ├── pages/
-│   │   │   ├── InspirationPage.tsx    # [NEW] 灵感提示页面（上传图片 → AI 分析 → 提示词展示）
-│   │   │   ├── CharacterGenPage.tsx   # [NEW] 角色生图页面（输入提示词 → 生成图片展示）
-│   │   │   ├── ThreeViewPage.tsx      # [NEW] 角色三视图页面（上传参考图 → 分析 → 生成三视图）
-│   │   │   ├── PosterGenPage.tsx      # [NEW] 海报生成页面（上传参考图 → 生成海报）
-│   │   │   ├── CgGenPage.tsx         # [NEW] CG 生成页面（占位，显示"功能开发中"）
-│   │   │   └── RecordsPage.tsx        # [NEW] 生成记录查看页面（分页列表，显示 token 用量）
+│   │   │   ├── InspirationPage.tsx    # [更新] 顶部 Vision 模型选择器
+│   │   │   ├── CharacterGenPage.tsx  # [更新] 顶部文生图模型选择器
+│   │   │   ├── ThreeViewPage.tsx      # [更新] 顶部图生图模型选择器 + 16:9锁定
+│   │   │   └── PosterGenPage.tsx      # [更新] 顶部图生图模型选择器 + 尺寸选择
 │   │   ├── hooks/
-│   │   │   ├── useTheme.ts            # [NEW] 主题切换自定义 Hook（读取/写入 localStorage）
-│   │   │   ├── useApiConfig.ts        # [NEW] API 配置读写 Hook（localStorage，复用 CharaForge 格式）
-│   │   │   └── useGeneration.ts       # [NEW] 生成操作通用 Hook（调用后端 API，处理加载/错误状态）
+│   │   │   └── useApiConfig.ts        # [重构] 支持模型分类和数据库持久化
 │   │   ├── services/
-│   │   │   ├── api.ts                # [NEW] 后端 API 调用封装（Axios 实例，拦截器）
-│   │   │   └── storage.ts            # [NEW] localStorage 操作封装（类型安全）
-│   │   ├── types/
-│   │   │   ├── index.ts              # [NEW] 全局 TypeScript 类型定义
-│   │   │   └── api.ts                # [NEW] 后端 API 请求/响应类型
-│   │   └── lib/
-│   │       └── utils.ts              # [NEW] 工具函数（图片压缩 base64、token 格式化等）
-├── backend/                           # [NEW] Express 后端项目
-│   ├── package.json                   # [NEW] 后端依赖配置
-│   ├── tsconfig.json                  # [NEW] TypeScript 配置
-│   ├── .env.example                  # [NEW] 环境变量示例（端口号等，不含 API Key）
-│   └── src/
-│       ├── index.ts                   # [NEW] 后端入口，启动 Express，连接数据库
-│       ├── app.ts                     # [NEW] Express 应用配置（CORS、JSON 解析、路由挂载）
-│       ├── database.ts                # [NEW] SQLite 数据库连接与初始化（创建表）
-│       ├── routes/
-│       │   ├── generate.ts           # [NEW] 生成相关路由（/api/vision/analyze, /api/image/generate, /api/poster/generate）
-│       │   └── records.ts            # [NEW] 生成记录 CRUD 路由（GET/POST/DELETE）
-│       ├── services/
-│       │   ├── visionService.ts       # [NEW] Vision LLM 调用服务（多服务商，移植 CharaForge 逻辑）
-│       │   ├── imageGenService.ts     # [NEW] DALL-E / GPT-Image 图片生成服务
-│       │   └── posterService.ts       # [NEW] 海报生成服务（调用 Vision + Image Gen 组合）
-│       ├── middleware/
-│       │   ├── errorHandler.ts        # [NEW] 全局错误处理中间件（统一错误响应格式）
-│       │   └── validateRequest.ts    # [NEW] 请求参数校验中间件（Joi 或 Zod）
-│       └── types/
-│           └── index.ts              # [NEW] 后端 TypeScript 类型定义
-└── README.md                          # [NEW] 项目说明文档（启动步骤、环境变量说明）
+│   │   │   ├── api.ts                # [更新] 新增模型管理API
+│   │   │   └── storage.ts            # [更新] 支持模型配置数据库操作
+│   │   └── types/
+│   │       ├── index.ts              # [更新] 新增 ModelCategory, ModelConfig 类型
+│   │       └── api.ts                # [更新] 新增模型管理 API 类型
+├── backend/
+│   ├── src/
+│   │   ├── database.ts                # [更新] 新增 model_configs 表
+│   │   ├── app.ts                    # [更新] 注册模型配置路由
+│   │   └── routes/
+│   │       ├── modelConfigs.ts        # [新增] 模型配置 CRUD + API检测 + Vision检测
+│   │       ├── generate.ts
+│   │       └── records.ts
+└── README.md                          # [更新] 新功能说明和数据库结构
+```
+
+## 数据库结构
+
+### model_configs 表
+```sql
+CREATE TABLE model_configs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  api_key TEXT,
+  endpoint TEXT,
+  use_proxy INTEGER DEFAULT 0,
+  proxy_endpoint TEXT,
+  category TEXT DEFAULT 'vision',
+  capabilities TEXT,
+  is_active INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## License
 
 MIT License
->>>>>>> 4ecd04bb4d6193a160064bda4d23f07965118bff

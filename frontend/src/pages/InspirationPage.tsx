@@ -6,14 +6,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
+import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
-import type { VisionAnalysisResult } from '@/types';
+import type { VisionAnalysisResult, ModelConfig } from '@/types';
 import { cn, base64ToDataUrl } from '@/lib/utils';
 
 export function InspirationPage() {
   const [images, setImages] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<VisionAnalysisResult | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [selectedVisionModel, setSelectedVisionModel] = useState<string>('gpt-4o');
   
   const { isLoading, error, analyze } = useGeneration();
 
@@ -42,13 +44,28 @@ export function InspirationPage() {
     return JSON.stringify(analysis, null, 2);
   };
 
+  const handleModelChange = (modelId: string, config: ModelConfig) => {
+    setSelectedVisionModel(config.model);
+    // 可以在这里保存用户选择
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold gradient-text">灵感提示</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          上传图片，AI 将分析并生成描述性提示词
-        </p>
+      {/* Header with model selector */}
+      <div className="flex items-center justify-between">
+        <div className="text-center flex-1 space-y-2">
+          <h1 className="text-3xl font-bold gradient-text ml-8">灵感提示</h1>
+          <p className="text-gray-600 dark:text-gray-400 ml-8">
+            上传图片，AI 将分析并生成描述性提示词
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <ModelDropdown
+            category="vision"
+            selectedModel={selectedVisionModel}
+            onModelChange={handleModelChange}
+          />
+        </div>
       </div>
 
       {/* Upload Section */}
@@ -103,29 +120,62 @@ export function InspirationPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* AI 画风分析 */}
+          {/* AI 完整分析 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-primary-500" />
-                  AI 画风分析
+                  AI 完整分析
                 </span>
                 <span className="text-sm font-normal text-green-600 dark:text-green-400 flex items-center gap-1">
                   ✨ 分析完成
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Textarea
-                value={analysis.analysis.zh}
-                onChange={(e) => setAnalysis({
-                  ...analysis,
-                  analysis: { ...analysis.analysis, zh: e.target.value }
-                })}
-                className="min-h-[150px] resize-y"
-                placeholder="AI 分析结果将显示在这里..."
-              />
+            <CardContent className="space-y-4">
+              {/* 主要内容 */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">内容分析</h4>
+                <Textarea
+                  value={analysis.analysis?.zh || ''}
+                  onChange={(e) => setAnalysis({
+                    ...analysis,
+                    analysis: { ...analysis.analysis, zh: e.target.value }
+                  })}
+                  className="min-h-[100px] resize-y"
+                  placeholder="AI 分析结果将显示在这里..."
+                />
+              </div>
+              
+              {/* 画风特征 */}
+              {(analysis as any)['画风特征']?.zh && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">画风特征</h4>
+                  <Textarea
+                    value={(analysis as any)['画风特征'].zh}
+                    onChange={(e) => setAnalysis({
+                      ...analysis,
+                      ['画风特征']: { ...(analysis as any)['画风特征'], zh: e.target.value }
+                    } as any)}
+                    className="min-h-[100px] resize-y"
+                  />
+                </div>
+              )}
+              
+              {/* 其他动态字段 */}
+              {Object.entries(analysis).filter(([key]) => key !== 'analysis' && key !== '画风特征').map(([key, value]: [string, any]) => (
+                value?.zh && (
+                  <div key={key}>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{key}</h4>
+                    <Textarea
+                      value={value.zh}
+                      readOnly
+                      className="min-h-[80px] resize-y"
+                    />
+                  </div>
+                )
+              ))}
             </CardContent>
           </Card>
 

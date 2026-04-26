@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Wand2, Loader2, Download } from 'lucide-react';
+import { Wand2, Loader2, Download, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
+import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
+import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
 export function ThreeViewPage() {
@@ -14,6 +16,7 @@ export function ThreeViewPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisPrompt, setAnalysisPrompt] = useState('');
   const [userPrompt, setUserPrompt] = useState('');  // 用户自定义提示词
+  const [selectedModel, setSelectedModel] = useState<string>('wanx');
   
   const { isLoading, error, analyze, generateThreeView } = useGeneration();
 
@@ -48,14 +51,38 @@ export function ThreeViewPage() {
 
   const viewLabels = ['正面', '侧面', '背面'];
 
+  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
+    setSelectedModel(modelConfig.model);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          上传角色参考图，AI 将分析画风并生成三视图
-        </p>
+      {/* Header with model selector */}
+      <div className="flex items-center justify-between">
+        <div className="text-center flex-1 space-y-2">
+          <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            上传角色参考图，AI 将分析画风并生成三视图
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <ModelDropdown
+            category="image-to-image"
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
+          />
+        </div>
       </div>
+
+      {/* 16:9 Size Notice */}
+      <Card className="border-blue-300 bg-blue-50/50 dark:bg-blue-900/20">
+        <CardContent className="p-3 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            三视图输出尺寸锁定为 <strong>16:9</strong> (1920x1080) 横向宽屏比例
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Reference Image Upload */}
       <Card>
@@ -149,7 +176,7 @@ export function ThreeViewPage() {
           <div className="grid gap-4 md:grid-cols-3">
             {generatedImages.map((img, index) => (
               <Card key={index} className="overflow-hidden">
-                <div className="aspect-square relative">
+                <div className="relative" style={{ aspectRatio: '16/9' }}>
                   <img
                     src={base64ToDataUrl(img)}
                     alt={viewLabels[index]}

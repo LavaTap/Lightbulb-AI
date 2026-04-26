@@ -1,4 +1,4 @@
-import type { APIConfig, VisionAnalysisResult } from './index';
+import type { APIConfig, VisionAnalysisResult, ModelConfig } from './index';
 
 export interface AnalyzeRequest {
   imageBase64: string;
@@ -55,4 +55,48 @@ export interface CreateRecordRequest {
   modelProvider: string;
   modelName: string;
   tokenUsage: number;
+}
+
+// Model Config API types
+export interface ModelConfigsResponse {
+  success: boolean;
+  data: ModelConfig[];
+}
+
+export interface ModelConfigResponse {
+  success: boolean;
+  data: ModelConfig | null;
+}
+
+export interface CreateModelConfigRequest {
+  name: string;
+  provider: string;
+  model: string;
+  apiKey?: string;
+  endpoint?: string;
+  useProxy?: boolean;
+  proxyEndpoint?: string;
+  category?: string;
+  capabilities?: string[];
+  isActive?: boolean;
+}
+
+export interface TestConnectionRequest {
+  provider: string;
+  apiKey: string;
+  model: string;
+  endpoint?: string;
+  useProxy?: boolean;
+  proxyEndpoint?: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface DetectVisionResponse {
+  success: boolean;
+  hasVision: boolean;
+  message: string;
 }

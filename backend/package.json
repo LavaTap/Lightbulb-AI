@@ -9,18 +9,19 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "sql.js": "^1.11.0",
+    "axios": "^1.15.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "openai": "^4.68.2",
+    "sql.js": "^1.11.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/sql.js": "^1.4.9",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.7.4",
+    "@types/sql.js": "^1.4.9",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2"
   }

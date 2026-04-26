@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Settings, History, ChevronDown, Sun, Moon, Loader2 } from 'lucide-react';
+import { User, Settings, History, ChevronDown, Sun, Moon, Bot } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelector } from './ModelSelector';
@@ -36,14 +36,14 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
           sideOffset={8}
           align="end"
         >
-          {/* Model Config */}
+          {/* Model Manager */}
           <DropdownMenu.Item className="outline-none">
             <div className="w-full">
               <ModelSelector 
                 trigger={
                   <button className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
-                    <Settings className="w-4 h-4" />
-                    <span>模型配置</span>
+                    <Bot className="w-4 h-4" />
+                    <span>模型管理</span>
                     <span className="ml-auto text-xs bg-primary-100 dark:bg-primary-900 px-2 py-0.5 rounded-full text-primary-600 dark:text-primary-300">
                       {currentProvider}
                     </span>

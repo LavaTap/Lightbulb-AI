@@ -7,7 +7,13 @@ import type {
   GeneratePosterRequest,
   GeneratePosterResponse,
   RecordsResponse,
-  CreateRecordRequest
+  CreateRecordRequest,
+  ModelConfigsResponse,
+  ModelConfigResponse,
+  CreateModelConfigRequest,
+  TestConnectionRequest,
+  TestConnectionResponse,
+  DetectVisionResponse
 } from '@/types/api';
 
 const api: AxiosInstance = axios.create({
@@ -61,6 +67,50 @@ export const recordsApi = {
   
   delete: async (id: number): Promise<void> => {
     await api.delete(`/records/${id}`);
+  },
+};
+
+export const modelConfigsApi = {
+  getAll: async (): Promise<ModelConfigsResponse> => {
+    const response = await api.get('/model-configs');
+    return response.data;
+  },
+  
+  getById: async (id: number): Promise<ModelConfigResponse> => {
+    const response = await api.get(`/model-configs/${id}`);
+    return response.data;
+  },
+  
+  getActive: async (): Promise<ModelConfigResponse> => {
+    const response = await api.get('/model-configs/active');
+    return response.data;
+  },
+  
+  create: async (data: CreateModelConfigRequest): Promise<{ id: number }> => {
+    const response = await api.post('/model-configs', data);
+    return response.data.data;
+  },
+  
+  update: async (id: number, data: Partial<CreateModelConfigRequest>): Promise<void> => {
+    await api.put(`/model-configs/${id}`, data);
+  },
+  
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/model-configs/${id}`);
+  },
+  
+  activate: async (id: number): Promise<void> => {
+    await api.post(`/model-configs/${id}/activate`);
+  },
+  
+  testConnection: async (data: TestConnectionRequest): Promise<TestConnectionResponse> => {
+    const response = await api.post('/model-configs/test-connection', data);
+    return response.data;
+  },
+  
+  detectVision: async (data: TestConnectionRequest): Promise<DetectVisionResponse> => {
+    const response = await api.post('/model-configs/detect-vision', data);
+    return response.data;
   },
 };
 

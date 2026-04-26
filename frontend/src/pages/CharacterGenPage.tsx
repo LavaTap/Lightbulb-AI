@@ -4,13 +4,16 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
 import { useApiConfig } from '@/hooks/useApiConfig';
+import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
 export function CharacterGenPage() {
   const [prompt, setPrompt] = useState('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('dall-e-3');
   
   const { isLoading, error, generate } = useGeneration();
   const { getCurrentConfig } = useApiConfig();
@@ -35,13 +38,27 @@ export function CharacterGenPage() {
 
   const config = getCurrentConfig();
 
+  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
+    setSelectedModel(modelConfig.model);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold gradient-text">角色生图</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          输入提示词，AI 将生成角色图片
-        </p>
+      {/* Header with model selector */}
+      <div className="flex items-center justify-between">
+        <div className="text-center flex-1 space-y-2">
+          <h1 className="text-3xl font-bold gradient-text">角色生图</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            输入提示词，AI 将生成角色图片
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <ModelDropdown
+            category="text-to-image"
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
+          />
+        </div>
       </div>
 
       {/* Prompt Input */}
@@ -57,14 +74,7 @@ export function CharacterGenPage() {
             className="min-h-[120px]"
           />
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>当前模型:</span>
-              <span className="bg-primary-100 dark:bg-primary-900 px-2 py-0.5 rounded-full text-primary-600 dark:text-primary-300">
-                {config?.model || '未配置'}
-              </span>
-            </div>
-            
+          <div className="flex items-center justify-end">
             <Button
               onClick={handleGenerate}
               disabled={!prompt.trim() || isLoading}

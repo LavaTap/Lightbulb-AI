@@ -1,7 +1,9 @@
-import type { APIConfig } from '@/types';
+import type { APIConfig, ModelConfig, ModelCategory } from '@/types';
+import { modelConfigsApi } from './api';
 
 const STORAGE_KEY_PREFIX = 'charaforge_api_';
 
+// Legacy localStorage functions for backward compatibility
 export function getStoredConfigs(): Record<string, APIConfig> {
   const configs: Record<string, APIConfig> = {};
   
@@ -46,6 +48,51 @@ export function deleteConfig(provider: string): void {
   localStorage.removeItem(key);
 }
 
+// Model Configs from Backend Database
+export async function getModelConfigs(): Promise<ModelConfig[]> {
+  try {
+    const response = await modelConfigsApi.getAll();
+    return response.data;
+  } catch (e) {
+    console.error('Failed to fetch model configs from API:', e);
+    return [];
+  }
+}
+
+export async function getActiveModelConfig(): Promise<ModelConfig | null> {
+  try {
+    const response = await modelConfigsApi.getActive();
+    return response.data;
+  } catch (e) {
+    console.error('Failed to fetch active model config:', e);
+    return null;
+  }
+}
+
+export async function saveModelConfig(config: Omit<ModelConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
+  const result = await modelConfigsApi.create(config as any);
+  return result.id;
+}
+
+export async function updateModelConfig(id: number, config: Partial<ModelConfig>): Promise<void> {
+  await modelConfigsApi.update(id, config as any);
+}
+
+export async function deleteModelConfig(id: number): Promise<void> {
+  await modelConfigsApi.delete(id);
+}
+
+export async function activateModelConfig(id: number): Promise<void> {
+  await modelConfigsApi.activate(id);
+}
+
+// Get configs filtered by category
+export async function getModelConfigsByCategory(category: ModelCategory): Promise<ModelConfig[]> {
+  const configs = await getModelConfigs();
+  return configs.filter(c => c.category === category);
+}
+
+// Theme functions
 export function getTheme(): 'dark' | 'light' {
   const stored = localStorage.getItem('lightbulb_theme');
   if (stored === 'light' || stored === 'dark') return stored;
@@ -62,6 +109,7 @@ export function setTheme(theme: 'dark' | 'light'): void {
   document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 
+// Provider functions
 export function getCurrentProvider(): string {
   return localStorage.getItem('lightbulb_current_provider') || 'openai';
 }

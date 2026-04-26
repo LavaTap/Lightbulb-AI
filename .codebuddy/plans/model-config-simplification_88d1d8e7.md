@@ -1,0 +1,175 @@
+---
+name: model-config-simplification
+overview: 简化模型配置流程：移除必选的模型类型选择、保存前不强制测试连接、确保模型管理列表显示完整信息并支持删除
+design:
+  architecture:
+    framework: react
+    component: shadcn
+  styleKeywords:
+    - Glassmorphism
+    - Modern Minimalism
+    - Gradient Accents
+    - Smooth Transitions
+  fontSystem:
+    fontFamily: PingFang SC
+    heading:
+      size: 20px
+      weight: 600
+    subheading:
+      size: 14px
+      weight: 500
+    body:
+      size: 14px
+      weight: 400
+  colorSystem:
+    primary:
+      - "#3B82F6"
+      - "#6366F1"
+      - "#8B5CF6"
+    background:
+      - "#FFFFFF"
+      - "#F9FAFB"
+      - "#1F2937"
+    text:
+      - "#111827"
+      - "#6B7280"
+      - "#9CA3AF"
+    functional:
+      - "#10B981"
+      - "#EF4444"
+      - "#F59E0B"
+todos:
+  - id: remove-category-select
+    content: 移除 ModelSelector.tsx 中的模型类型选择 UI 块，改为自动推断 category
+    status: completed
+  - id: update-backend-schema
+    content: 后端 modelConfigSchema 的 category 字段改为可选并提供默认值
+    status: completed
+  - id: update-api-types
+    content: 前端 CreateModelConfigRequest 的 category 类型定义同步改为可选
+    status: completed
+    dependencies:
+      - update-backend-schema
+  - id: verify-save-delete
+    content: 验证保存功能和已删除列表的显示与删除功能完整性
+    status: completed
+    dependencies:
+      - remove-category-select
+      - update-backend-schema
+---
+
+## 产品概述
+
+对 Lightbulb AI 的「模型管理」弹窗进行功能优化，简化配置流程并完善已保存配置的管理能力。
+
+## 核心功能需求
+
+1. **移除手动选择模型类型（模态）的步骤**: 在"添加新配置"表单中，不再要求用户手动选择模型类型（多模态/文生图/图生图），系统根据所选服务商和模型自动推断类型
+2. **保存前不强制测试连接**: 填写完配置信息后可直接点击"保存到模型管理"，不需要先通过"测试连接"
+3. **已保存配置列表完整展示与可删除**: "已保存配置"标签页展示所有保存的模型配置信息（名称、服务商、模型、类型等），每条配置支持删除操作
+
+## 技术栈
+
+- **前端框架**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **后端**: Node.js + Express + TypeScript + SQLite (sql.js)
+- **状态管理**: React hooks + localStorage + 后端 SQLite 持久化
+
+## 实现方案
+
+采用**自动推断替代手动选择**策略：移除表单中的"模型类型"Select组件，改为在用户选择模型时从 PROVIDERS 预定义数据中自动提取 category；对于自定义服务商的模型则默认使用 'vision'。后端将 modelConfigSchema 的 category 字段从必填改为可选，并在缺失时提供合理默认值。
+
+### 关键修改点
+
+#### 前端 ModelSelector.tsx
+
+1. **移除"模型类型"选择 UI 块**（第407-435行）: 删除整个 Category Selection 的 Select 组件及其关联的 `<Label>模型类型</Label>`
+2. **保留 category 状态但改为内部自动推导**: `handleModelChange` 中已有的自动设置逻辑（第139-147行）继续生效；自定义模型输入时使用默认值 'vision'
+3. **handleSave 无需改动**: 当前已只检查 `configName/selectedProvider/model` 三个字段，不依赖 testResult，符合"不需测试连接即可保存"的要求
+4. **已保存配置列表无需大改**: 当前已有完整的列表渲染（第286-334行），包含名称、服务商、模型、类型展示和删除按钮，确认其正常工作即可
+
+#### 后端 modelConfigs.ts
+
+1. **modelConfigSchema 的 category 字段改为可选**: 将 `z.string().min(1)` 改为 `z.string().optional()`，在保存时若未提供 category 则默认填充 'vision'
+2. **确保 DELETE 接口正常**: 已实现（第198-206行），验证无误
+
+#### 数据流变化
+
+```
+用户填写配置 → 选择模型 → 自动推断category(隐藏) → 直接点保存 → 写入数据库 → 列表刷新显示
+```
+
+## 目录结构
+
+```
+d:/Program Files (x86)/lightbulb-AI/
+├── frontend/src/components/
+│   └── ModelSelector.tsx        # [MODIFY] 移除模型类型选择UI，优化保存逻辑
+├── backend/src/routes/
+│   └── modelConfigs.ts          # [MODIFY] category字段改为可选
+└── frontend/src/types/
+    └── api.ts                   # [MODIFY] CreateModelConfigRequest.category改为可选
+```
+
+## 设计风格
+
+保持现有项目的设计语言：现代 Glassmorphism 风格，渐变色主色调（蓝到靛蓝），圆角卡片布局，平滑过渡动画。
+
+## 页面设计变更说明
+
+### 模型管理弹窗 - 添加新配置标签页
+
+**变更重点：移除"模型类型"选择区域，精简表单流程**
+
+#### 区块1: 表单标题区（不变）
+
+- 保留"添加新配置"标签页标题
+
+#### 区块2: 配置名称输入（不变）
+
+- 配置名称文本输入框，placeholder "例如：我的GPT-4o配置"
+
+#### 区块3: 服务商下拉选择（不变）
+
+- 支持选择 OpenAI / Google Gemini / DeepSeek / 讯飞 / 自定义
+
+#### 区块4: API Key 输入（不变）
+
+- 密码模式输入框
+
+#### 区块5: 模型选择（不变）
+
+- 非自定义服务商：下拉选择预定义模型（含名称和描述）
+- 自定义服务商：文本输入框自由输入模型名
+
+#### ~~区块6: 模型类型选择~~ **【移除】**
+
+- 删除原来的"模型类型"三选一下拉框（多模态/文生图/图生图）
+- 类型由系统后台根据选择的模型自动判定，对用户透明
+
+#### 区块7: 使用代理开关（不变）
+
+- Switch 开关控制代理启用状态
+
+#### 区块8: 代理地址/端点地址（条件显示，不变）
+
+#### 区块9: 测试结果提示区（不变）
+
+- 测试连接 / Vision检测结果的条件展示
+
+#### 区块10: 操作按钮组（调整按钮可用性）
+
+- "测试连接" 按钮：可选操作，不影响保存
+- "检测Vision能力" 按钮：可选操作，不影响保存  
+- **"保存到模型管理" 主按钮**：只要填写了配置名称+服务商+模型即可点击（不再有任何前置条件限制）
+
+### 模型管理弹窗 - 已保存配置标签页（微调增强）
+
+#### 列表卡片设计（已有，确认完善）
+
+每张配置卡片包含：
+
+- **标题行**: 配置名称 + "使用中"激活标签（绿色圆角徽章）
+- **操作行右侧**: 删除按钮（红色警告色，Trash2图标）
+- **信息行**: 服务商名称 | 模型ID | 自动判定的类型标签（多模态/文生图/图生图）
+- **激活态视觉反馈**: 当前使用的配置卡片显示绿色边框 + 淡绿色背景
+- **空态提示**: 当无配置时显示居中空状态插画和引导文字
