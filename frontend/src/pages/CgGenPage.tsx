@@ -15,7 +15,7 @@ export function CgGenPage() {
             repeat: Infinity,
             ease: 'easeInOut'
           }}
-          className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center"
+          className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center"
         >
           <Construction className="w-12 h-12 text-white" />
         </motion.div>

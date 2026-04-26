@@ -95,8 +95,4 @@ export interface TestConnectionResponse {
   message: string;
 }
 
-export interface DetectVisionResponse {
-  success: boolean;
-  hasVision: boolean;
-  message: string;
-}
+// DetectVisionResponse removed - vision detection feature deprecated

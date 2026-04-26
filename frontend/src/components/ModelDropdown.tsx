@@ -18,8 +18,8 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
   
   const selectedConfig = filteredConfigs.find(c => c.model === selectedModel || c.id.toString() === selectedModel);
   
-  const categoryLabels = {
-    vision: '多模态',
+  const categoryLabels: Record<string, string> = {
+    vision: '多模态 / 视觉分析',
     'text-to-image': '文生图',
     'image-to-image': '图生图',
   };

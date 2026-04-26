@@ -22,20 +22,12 @@ export function ThreeViewPage() {
 
   const handleAnalyzeAndGenerate = async () => {
     if (referenceImage.length === 0) return;
+    if (!userPrompt.trim()) return;
     
     setAnalyzing(true);
     try {
-      // 如果有用户输入的提示词，直接使用；否则先分析画风
-      if (userPrompt.trim()) {
-        const images = await generateThreeView(referenceImage[0], analysisPrompt, userPrompt);
-        setGeneratedImages(images);
-      } else {
-        const result = await analyze(referenceImage[0]);
-        const prompt = result.analysis.en;
-        setAnalysisPrompt(prompt);
-        const images = await generateThreeView(referenceImage[0], prompt, '');
-        setGeneratedImages(images);
-      }
+      const images = await generateThreeView(referenceImage[0], analysisPrompt, userPrompt);
+      setGeneratedImages(images);
     } catch (e) {
       console.error(e);
     }
@@ -62,7 +54,7 @@ export function ThreeViewPage() {
         <div className="text-center flex-1 space-y-2">
           <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            上传角色参考图，AI 将分析画风并生成三视图
+            上传角色参考图，<strong>同时输入提示词（必填）</strong>，AI 将结合两者生成三张2K高清三视图
           </p>
         </div>
         <div className="flex-shrink-0">
@@ -75,11 +67,11 @@ export function ThreeViewPage() {
       </div>
 
       {/* 16:9 Size Notice */}
-      <Card className="border-blue-300 bg-blue-50/50 dark:bg-blue-900/20">
+      <Card className="border-green-300 bg-green-50/50 dark:bg-green-900/20">
         <CardContent className="p-3 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            三视图输出尺寸锁定为 <strong>16:9</strong> (1920x1080) 横向宽屏比例
+          <AlertCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+          <p className="text-sm text-green-700 dark:text-green-300">
+            三视图输出尺寸锁定为 <strong>16:9</strong> (2560x1440) 2K高清横向宽屏比例，共生成 <strong>3张</strong>（正面/侧面/背面）
           </p>
         </CardContent>
       </Card>
@@ -101,17 +93,22 @@ export function ThreeViewPage() {
       {/* User Custom Prompt Input */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">自定义提示词（可选）</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            提示词（必填）
+            {!userPrompt.trim() && (
+              <span className="text-xs text-red-500 font-normal">* 请输入描述</span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
             value={userPrompt}
             onChange={(e) => setUserPrompt(e.target.value)}
-            placeholder="输入你想要的三视图描述，如：银发红瞳的女战士，穿着华丽的盔甲...（留空则使用AI分析结果）"
+            placeholder="输入你想要的三视图描述，如：银发红瞳的女战士，穿着华丽的盔甲..."
             className="min-h-[80px]"
           />
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            提示：你可以同时上传参考图 + 输入提示词，AI会结合两者生成更符合预期的三视图
+            <span className="text-red-500">*</span> 提示词为必填项，请结合参考图详细描述角色特征
           </p>
         </CardContent>
       </Card>
@@ -120,7 +117,7 @@ export function ThreeViewPage() {
       <div className="flex justify-center">
         <Button
           onClick={handleAnalyzeAndGenerate}
-          disabled={referenceImage.length === 0 || isLoading}
+          disabled={referenceImage.length === 0 || !userPrompt.trim() || isLoading}
           size="lg"
           className="px-8"
         >
@@ -129,7 +126,7 @@ export function ThreeViewPage() {
           ) : (
             <Wand2 className="w-4 h-4 mr-2" />
           )}
-          生成三视图
+          {referenceImage.length === 0 ? '请先上传参考图' : !userPrompt.trim() ? '请输入提示词' : '生成三视图'}
         </Button>
       </div>
 

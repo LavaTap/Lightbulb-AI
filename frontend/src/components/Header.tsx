@@ -46,7 +46,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
             <Lightbulb className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold gradient-text hidden sm:block">Lightbulb AI</span>
@@ -68,8 +68,8 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
             >
               {/* Text with gradient animation on hover */}
               <span className="relative z-10 inline-block transition-all duration-300 
-                group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-sky-400 group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-110
-                dark:group-hover:bg-gradient-to-r dark:group-hover:from-primary-500 dark:group-hover:to-indigo-500 dark:group-hover:bg-clip-text dark:group-hover:text-transparent">
+                group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-110
+                dark:group-hover:bg-gradient-to-r dark:group-hover:from-blue-400 dark:group-hover:to-cyan-400 dark:group-hover:bg-clip-text dark:group-hover:text-transparent">
                 {tab.label}
               </span>
               {/* Underline grow animation */}
@@ -77,8 +77,8 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
                 absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5
                 transition-all duration-300 rounded-full
                 ${activeTab === tab.id ? 'w-full' : 'w-0 group-hover:w-full'}
-                bg-gradient-to-r from-blue-400 to-sky-400
-                dark:from-primary-500 dark:to-indigo-500
+                bg-gradient-to-r from-blue-500 to-cyan-500
+                dark:from-blue-400 dark:to-cyan-400
               `}></span>
             </button>
           ))}

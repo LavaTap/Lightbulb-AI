@@ -136,19 +136,6 @@ export function useApiConfig() {
     return response;
   }, []);
 
-  // Detect vision capability
-  const detectVision = useCallback(async (config: {
-    provider: string;
-    apiKey: string;
-    model: string;
-    endpoint?: string;
-    useProxy?: boolean;
-    proxyEndpoint?: string;
-  }) => {
-    const response = await modelConfigsApi.detectVision(config);
-    return response;
-  }, []);
-
   // Delete model config
   const deleteModelConfigById = useCallback(async (id: number) => {
     await modelConfigsApi.delete(id);
@@ -168,7 +155,6 @@ export function useApiConfig() {
     getConfigsByCategory,
     selectCategory,
     testConnection,
-    detectVision,
     deleteModelConfig: deleteModelConfigById,
     reloadModelConfigs: loadModelConfigs,
   };

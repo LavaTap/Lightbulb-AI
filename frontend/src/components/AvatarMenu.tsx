@@ -19,7 +19,7 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
           <ChevronDown className="w-4 h-4 text-gray-500" />

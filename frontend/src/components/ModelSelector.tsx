@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Check, Loader2, Trash2, AlertCircle, Sparkles } from 'lucide-react';
+import { Bot, Check, Loader2, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -33,36 +33,65 @@ const PROVIDERS: ProviderInfo[] = [
     models: [
       { id: 'gpt-4o', name: 'GPT-4o', category: 'vision', capabilities: ['vision', 'text'], description: '最新多模态模型，支持图片分析' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', category: 'vision', capabilities: ['vision', 'text'], description: '轻量多模态模型' },
+      { id: 'gpt-4.1', name: 'GPT-4.1', category: 'vision', capabilities: ['vision', 'text'], description: '最新GPT-4系列' },
       { id: 'dall-e-3', name: 'DALL-E 3', category: 'text-to-image', capabilities: ['image-generation'], description: 'OpenAI图像生成' },
-      { id: 'gpt-image-1', name: 'GPT Image 1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '新一代图像生成模型' },
+      { id: 'gpt-image-1', name: 'GPT Image 1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '新一代图像生成/编辑模型' },
     ],
   },
   {
     id: 'google',
     name: 'Google Gemini',
     models: [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '高速多模态模型' },
-      { id: 'gemini-2.5-pro-preview-06-05', name: 'Gemini 2.5 Pro', category: 'vision', capabilities: ['vision', 'text'], description: '高性能多模态模型' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '轻量快速多模态' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '高速多模态模型' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', category: 'vision', capabilities: ['vision', 'text'], description: '高性能多模态模型' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '快速多模态推理' },
       { id: 'imagen-3', name: 'Imagen 3', category: 'text-to-image', capabilities: ['image-generation'], description: 'Google高质量图像生成' },
+      { id: 'imagen-4', name: 'Imagen 4', category: 'text-to-image', capabilities: ['image-generation'], description: '最新图像生成' },
     ],
   },
   {
     id: 'deepseek',
     name: 'DeepSeek',
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'vision', capabilities: ['text'], description: '纯文本模型，不支持Vision' },
-      { id: 'deepseek-coder', name: 'DeepSeek Coder', category: 'text-to-image', capabilities: ['text'], description: '代码专用模型' },
+      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'vision', capabilities: ['text'], description: '高性能文本模型' },
+      { id: 'deepseek-r1', name: 'DeepSeek R1', category: 'vision', capabilities: ['text'], description: '推理增强模型' },
+      { id: 'janus-pro', name: 'Janus-Pro', category: 'vision', capabilities: ['vision', 'text', 'image-generation'], description: 'DeepSeek原生多模态' },
+    ],
+  },
+  {
+    id: 'aliyun',
+    name: '阿里云 通义千问',
+    models: [
+      { id: 'qwen-vl-max', name: 'Qwen-VL-Max', category: 'vision', capabilities: ['vision', 'text'], description: '通义千问视觉大模型' },
+      { id: 'qwen-vl-plus', name: 'Qwen-VL-Plus', category: 'vision', capabilities: ['vision', 'text'], description: '轻量视觉模型' },
+      { id: 'wanx-v1', name: 'Wanx v1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '通义万相图像生成' },
+      { id: 'wanx2.1', name: 'Wanx 2.1', category: 'text-to-image', capabilities: ['image-generation'], description: '新一代图像生成' },
+    ],
+  },
+  {
+    id: 'bytedance',
+    name: '字节跳动 豆包',
+    models: [
+      { id: 'doubao-pro-32k', name: '豆包 Pro-32K', category: 'vision', capabilities: ['text'], description: '长文本处理' },
+      { id: 'doubao-vision', name: '豆包 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '多模态理解模型' },
+      { id: 'seedance', name: 'Seedance', category: 'text-to-image', capabilities: ['image-generation'], description: '字节视频/图像生成' },
+    ],
+  },
+  {
+    id: 'baidu',
+    name: '百度 文心一言',
+    models: [
+      { id: 'ernie-4.0', name: '文心 4.0', category: 'vision', capabilities: ['text'], description: '最新文心大模型' },
+      { id: 'ernie-4-vision', name: '文心 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '文心多模态' },
+      { id: 'ernie-vilg', name: '文心一格', category: 'text-to-image', capabilities: ['image-generation'], description: '百度AI绘画' },
     ],
   },
   {
     id: 'xfyun',
-    name: '讯飞',
+    name: '讯飞星火',
     models: [
-      { id: 'qwen-vl-plus', name: 'Qwen-VL-Plus', category: 'vision', capabilities: ['vision', 'text'], description: '阿里通义千问多模态' },
-      { id: 'qwen-vl-max', name: 'Qwen-VL-Max', category: 'vision', capabilities: ['vision', 'text'], description: '阿里通义千问增强版' },
-      { id: 'qwen-image', name: 'Qwen-Image', category: 'text-to-image', capabilities: ['image-generation'], description: '阿里通义图像生成' },
-      { id: 'wanx', name: 'Wanx', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '阿里图像生成增强版' },
+      { id: 'xunfeispark-4.0-ultra', name: '星火 4.0 Ultra', category: 'vision', capabilities: ['text'], description: '讯飞最新旗舰' },
+      { id: 'spark4-vision', name: '星火 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '讯飞多模态' },
     ],
   },
   {
@@ -88,7 +117,6 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
     saveToModelManager,
     deleteModelConfig,
     testConnection,
-    detectVision,
     reloadModelConfigs,
   } = useApiConfig();
 
@@ -101,10 +129,9 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
   const [proxyEndpoint, setProxyEndpoint] = useState('');
   const [category, setCategory] = useState<ModelCategory>('vision');
   const [testing, setTesting] = useState(false);
-  const [detectingVision, setDetectingVision] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [visionResult, setVisionResult] = useState<{ hasVision: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCustomWarning, setShowCustomWarning] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -129,7 +156,6 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
       setProxyEndpoint('');
     }
     setTestResult(null);
-    setVisionResult(null);
   };
 
   const handleProviderChange = (provider: string) => {
@@ -171,31 +197,16 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
     setTesting(false);
   };
 
-  const handleDetectVision = async () => {
-    if (!apiKey || !model) return;
-    
-    setDetectingVision(true);
-    setVisionResult(null);
-    
-    try {
-      const result = await detectVision({
-        provider: selectedProvider,
-        apiKey,
-        model,
-        endpoint: selectedProvider === 'custom' ? endpoint : undefined,
-        useProxy,
-        proxyEndpoint: useProxy ? proxyEndpoint : undefined,
-      });
-      setVisionResult({ hasVision: result.hasVision, message: result.message });
-    } catch (e: any) {
-      setVisionResult({ hasVision: false, message: e.message });
-    }
-    setDetectingVision(false);
-  };
-
   const handleSave = async () => {
     if (!configName || !selectedProvider || !model) return;
-    
+    if (selectedProvider === 'custom') {
+      setShowCustomWarning(true);
+      return;
+    }
+    await executeSave();
+  };
+
+  const executeSave = async () => {
     setSaving(true);
     try {
       await saveToModelManager(
@@ -225,7 +236,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
       setOpen(false);
       setConfigName('');
       setTestResult(null);
-      setVisionResult(null);
+      setShowCustomWarning(false);
     } catch (e) {
       console.error('Failed to save:', e);
     }
@@ -459,16 +470,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
               </div>
             )}
 
-            {/* Vision Detection Result */}
-            {visionResult && (
-              <div className={cn(
-                "flex items-center gap-2 p-3 rounded-lg",
-                visionResult.hasVision ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-              )}>
-                <Sparkles className="w-4 h-4" />
-                <span>{visionResult.message}</span>
-              </div>
-            )}
+            {/* Vision Detection Result - removed */}
 
             {/* Action Buttons */}
             <div className="flex gap-3 flex-wrap">
@@ -479,14 +481,6 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 测试连接
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleDetectVision}
-                disabled={detectingVision || !apiKey || !model}
-              >
-                {detectingVision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                检测Vision能力
               </Button>
               <Button
                 onClick={handleSave}
@@ -500,6 +494,49 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Custom Mode Warning Dialog */}
+      <Dialog open={showCustomWarning} onOpenChange={setShowCustomWarning}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+              <AlertCircle className="w-5 h-5" />
+              自定义模式提醒
+            </DialogTitle>
+            <DialogDescription>
+              您正在使用<strong>自定义</strong>模式添加模型配置。请确保所选模型的模态能力与使用场景匹配：
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="grid gap-2 text-sm">
+              <div className="flex items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20">
+                <span className="text-xs font-mono bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded">vision</span>
+                <span>多模态（图片分析/文字生成）→ 灵感提示</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900/20">
+                <span className="text-xs font-mono bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">text-to-image</span>
+                <span>文生图 → 角色生图</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded bg-purple-50 dark:bg-purple-900/20">
+                <span className="text-xs font-mono bg-purple-100 dark:bg-purple-800 px-1.5 py-0.5 rounded">image-to-image</span>
+                <span>图生图 → 三视图/海报生成</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              模态不匹配可能导致功能异常，请确认模型支持对应能力后再保存。
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowCustomWarning(false)}>
+              返回修改
+            </Button>
+            <Button onClick={() => { setShowCustomWarning(false); executeSave(); }} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              确认保存
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

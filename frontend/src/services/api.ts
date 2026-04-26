@@ -13,7 +13,6 @@ import type {
   CreateModelConfigRequest,
   TestConnectionRequest,
   TestConnectionResponse,
-  DetectVisionResponse
 } from '@/types/api';
 
 const api: AxiosInstance = axios.create({
@@ -105,11 +104,6 @@ export const modelConfigsApi = {
   
   testConnection: async (data: TestConnectionRequest): Promise<TestConnectionResponse> => {
     const response = await api.post('/model-configs/test-connection', data);
-    return response.data;
-  },
-  
-  detectVision: async (data: TestConnectionRequest): Promise<DetectVisionResponse> => {
-    const response = await api.post('/model-configs/detect-vision', data);
     return response.data;
   },
 };
