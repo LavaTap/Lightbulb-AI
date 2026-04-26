@@ -1,8 +1,11 @@
 import type { APIConfig, VisionAnalysisResult, ModelConfig } from './index';
 
+export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
+
 export interface AnalyzeRequest {
   imageBase64: string;
   config: APIConfig;
+  category?: AnalysisCategory;  // 分析类型：character/landscape/object/other，角色类型会额外分析比例
 }
 
 export interface AnalyzeResponse {
@@ -95,4 +98,11 @@ export interface TestConnectionResponse {
   message: string;
 }
 
-// DetectVisionResponse removed - vision detection feature deprecated
+// 模型能力检测
+export interface DetectCapabilitiesResponse {
+  success: boolean;
+  data: {
+    capabilities: string[];
+    category: 'vision' | 'text-to-image' | 'image-to-image';
+  };
+}

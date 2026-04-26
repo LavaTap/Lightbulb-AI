@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Copy, Check } from 'lucide-react';
+import { Sparkles, Copy, Check, User, Mountain, Box, Sparkle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,22 +8,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
-import type { VisionAnalysisResult, ModelConfig } from '@/types';
+import type { VisionAnalysisResult, ModelConfig, AnalysisCategory } from '@/types';
 import { cn, base64ToDataUrl } from '@/lib/utils';
+
+// 分析类别配置
+const ANALYSIS_CATEGORIES: {
+  value: AnalysisCategory;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}[] = [
+  {
+    value: 'character',
+    label: '角色',
+    icon: User,
+    description: '含比例分析',
+  },
+  {
+    value: 'landscape',
+    label: '风景',
+    icon: Mountain,
+    description: '场景构图',
+  },
+  {
+    value: 'object',
+    label: '物品',
+    icon: Box,
+    description: '材质细节',
+  },
+  {
+    value: 'other',
+    label: '其他',
+    icon: Sparkle,
+    description: '通用分析',
+  },
+];
 
 export function InspirationPage() {
   const [images, setImages] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<VisionAnalysisResult | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedVisionModel, setSelectedVisionModel] = useState<string>('gpt-4o');
-  
+  const [selectedCategory, setSelectedCategory] = useState<AnalysisCategory>('other');
+
   const { isLoading, error, analyze } = useGeneration();
 
   const handleAnalyze = async () => {
     if (images.length === 0) return;
-    
+
     try {
-      const result = await analyze(images[0]);
+      const result = await analyze(images[0], selectedCategory);
       setAnalysis(result);
     } catch (e) {
       console.error(e);
@@ -101,6 +135,57 @@ export function InspirationPage() {
               )}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Category Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="w-5 h-5 text-primary-500" />
+            选择分析类型
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {ANALYSIS_CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isSelected = selectedCategory === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                    'hover:border-primary/50 hover:bg-primary/5',
+                    isSelected
+                      ? 'border-primary bg-primary/10 shadow-sm'
+                      : 'border-gray-200 dark:border-gray-700 bg-transparent'
+                  )}
+                >
+                  <Icon className={cn(
+                    'w-8 h-8 transition-colors',
+                    isSelected ? 'text-primary' : 'text-gray-500 dark:text-gray-400'
+                  )} />
+                  <span className={cn(
+                    'font-medium',
+                    isSelected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'
+                  )}>
+                    {cat.label}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {cat.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {selectedCategory === 'character' && (
+            <p className="mt-3 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Sparkles className="w-4 h-4" />
+              选择角色分析，将额外进行人体比例分析（头身比、三庭五眼等）
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -53,8 +53,8 @@ const PROVIDERS: ProviderInfo[] = [
     id: 'deepseek',
     name: 'DeepSeek',
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'vision', capabilities: ['text'], description: '高性能文本模型' },
-      { id: 'deepseek-r1', name: 'DeepSeek R1', category: 'vision', capabilities: ['text'], description: '推理增强模型' },
+      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'text-to-image', capabilities: ['text'], description: '高性能文本模型' },
+      { id: 'deepseek-r1', name: 'DeepSeek R1', category: 'text-to-image', capabilities: ['text'], description: '推理增强模型' },
       { id: 'janus-pro', name: 'Janus-Pro', category: 'vision', capabilities: ['vision', 'text', 'image-generation'], description: 'DeepSeek原生多模态' },
     ],
   },
@@ -72,7 +72,7 @@ const PROVIDERS: ProviderInfo[] = [
     id: 'bytedance',
     name: '字节跳动 豆包',
     models: [
-      { id: 'doubao-pro-32k', name: '豆包 Pro-32K', category: 'vision', capabilities: ['text'], description: '长文本处理' },
+      { id: 'doubao-pro-32k', name: '豆包 Pro-32K', category: 'text-to-image', capabilities: ['text'], description: '长文本处理' },
       { id: 'doubao-vision', name: '豆包 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '多模态理解模型' },
       { id: 'seedance', name: 'Seedance', category: 'text-to-image', capabilities: ['image-generation'], description: '字节视频/图像生成' },
     ],
@@ -81,7 +81,7 @@ const PROVIDERS: ProviderInfo[] = [
     id: 'baidu',
     name: '百度 文心一言',
     models: [
-      { id: 'ernie-4.0', name: '文心 4.0', category: 'vision', capabilities: ['text'], description: '最新文心大模型' },
+      { id: 'ernie-4.0', name: '文心 4.0', category: 'text-to-image', capabilities: ['text'], description: '最新文心大模型' },
       { id: 'ernie-4-vision', name: '文心 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '文心多模态' },
       { id: 'ernie-vilg', name: '文心一格', category: 'text-to-image', capabilities: ['image-generation'], description: '百度AI绘画' },
     ],
@@ -90,7 +90,7 @@ const PROVIDERS: ProviderInfo[] = [
     id: 'xfyun',
     name: '讯飞星火',
     models: [
-      { id: 'xunfeispark-4.0-ultra', name: '星火 4.0 Ultra', category: 'vision', capabilities: ['text'], description: '讯飞最新旗舰' },
+      { id: 'xunfeispark-4.0-ultra', name: '星火 4.0 Ultra', category: 'text-to-image', capabilities: ['text'], description: '讯飞最新旗舰' },
       { id: 'spark4-vision', name: '星火 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '讯飞多模态' },
     ],
   },
@@ -117,6 +117,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
     saveToModelManager,
     deleteModelConfig,
     testConnection,
+    detectCapabilities,
     reloadModelConfigs,
   } = useApiConfig();
 
@@ -132,6 +133,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCustomWarning, setShowCustomWarning] = useState(false);
+  const [detecting, setDetecting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -209,6 +211,36 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
   const executeSave = async () => {
     setSaving(true);
     try {
+      // 自动检测模型能力（如果有 API Key）
+      let detectedCategory = category;
+      let detectedCapabilities: string[] = [];
+      
+      if (apiKey && selectedProvider !== 'custom') {
+        setDetecting(true);
+        try {
+          const detectResult = await detectCapabilities({
+            provider: selectedProvider,
+            apiKey,
+            model,
+            endpoint: selectedProvider === 'custom' ? endpoint : undefined,
+            useProxy,
+            proxyEndpoint: useProxy ? proxyEndpoint : undefined,
+          });
+          
+          if (detectResult.success && detectResult.data) {
+            detectedCategory = detectResult.data.category;
+            detectedCapabilities = detectResult.data.capabilities;
+            // 自动设置检测到的类型
+            setCategory(detectedCategory);
+            console.log('[ModelSelector] Detected capabilities:', detectedCapabilities, 'category:', detectedCategory);
+          }
+        } catch (e) {
+          console.error('[ModelSelector] Failed to detect capabilities:', e);
+          // 检测失败时使用预设的类型
+        }
+        setDetecting(false);
+      }
+      
       await saveToModelManager(
         configName,
         selectedProvider,
@@ -217,8 +249,8 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
         endpoint,
         useProxy,
         proxyEndpoint,
-        category,
-        [],
+        detectedCategory,
+        detectedCapabilities,
         false
       );
       
@@ -286,7 +318,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
             模型管理
           </DialogTitle>
           <DialogDescription>
-            管理 AI 模型配置，支持真实 API 检测和多模态能力识别
+            管理 AI 模型配置。若连接失败可尝试自定义配置端点后测试连通性
           </DialogDescription>
         </DialogHeader>
 

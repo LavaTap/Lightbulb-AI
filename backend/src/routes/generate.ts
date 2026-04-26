@@ -10,8 +10,8 @@ const router = Router();
 // Vision analyze endpoint
 router.post('/vision/analyze', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { imageBase64, config } = analyzeSchema.parse(req.body);
-    
+    const { imageBase64, config, category } = analyzeSchema.parse(req.body);
+
     console.log('[Vision Analyze] Starting...');
     console.log('[Config]', JSON.stringify({
       provider: config.provider,
@@ -19,10 +19,11 @@ router.post('/vision/analyze', async (req: Request, res: Response, next: NextFun
       endpoint: config.endpoint,
       hasApiKey: !!config.apiKey,
       useProxy: config.useProxy,
-      proxyEndpoint: config.proxyEndpoint
+      proxyEndpoint: config.proxyEndpoint,
+      category: category || 'other (default)'
     }));
-    
-    const { result, tokenUsage } = await analyzeImage(imageBase64, config);
+
+    const { result, tokenUsage } = await analyzeImage(imageBase64, config, category);
     
     res.json({
       success: true,

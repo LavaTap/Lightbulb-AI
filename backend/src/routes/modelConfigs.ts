@@ -307,4 +307,117 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
   }
 });
 
+// POST detect model capabilities (vision, text-to-image, image-to-image)
+router.post('/detect-capabilities', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { provider, apiKey, model, endpoint, useProxy, proxyEndpoint } = testConnectionSchema.parse(req.body);
+    console.log('[Detect Capabilities] Starting detection for:', provider, model);
+
+    const capabilities: string[] = [];
+    let category = 'text-to-image'; // 默认类型
+
+    // 构建请求配置
+    let baseUrl = endpoint || 'https://api.openai.com/v1';
+    if (useProxy && proxyEndpoint) {
+      baseUrl = proxyEndpoint;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // 根据 provider 设置鉴权
+    if (provider === 'google') {
+      baseUrl = useProxy && proxyEndpoint ? proxyEndpoint : 'https://generativelanguage.googleapis.com';
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    // 测试 1: 尝试 Vision 能力（发送带图片的请求）
+    if (provider !== 'google') {
+      try {
+        // 测试图片理解能力
+        const testImageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='; // 1x1 透明图片
+        
+        await axios.post(
+          `${baseUrl}/chat/completions`,
+          {
+            model: model,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Reply with OK' },
+                  { type: 'image_url', image_url: { url: `data:image/png;base64,${testImageBase64}`, detail: 'low' } }
+                ]
+              }
+            ],
+            max_tokens: 10,
+          },
+          { headers, timeout: 15000 }
+        );
+        
+        // 如果成功响应，说明支持 Vision
+        capabilities.push('vision', 'text');
+        category = 'vision';
+        console.log('[Detect Capabilities] Vision supported');
+      } catch (err: any) {
+        const errStr = err.response?.data?.error?.message || err.message || '';
+        
+        // 检查是否是 vision 相关的错误
+        if (errStr.includes('image_url') || errStr.includes('unknown variant') || errStr.includes('vision')) {
+          console.log('[Detect Capabilities] Vision not supported (expected for text-only models)');
+        } else if (err.response?.status === 401 || err.response?.status === 404) {
+          // API 错误，继续检测其他能力
+          console.log('[Detect Capabilities] Vision test failed, continuing...');
+        }
+      }
+    } else {
+      // Google Gemini 天然支持 vision
+      capabilities.push('vision', 'text');
+      category = 'vision';
+    }
+
+    // 测试 2: 尝试文生图能力（对于特定模型）
+    // 注意：文生图通常使用不同的 API 端点，这里通过错误信息推断
+    const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg'];
+    if (imageGenModels.some(m => model.toLowerCase().includes(m))) {
+      capabilities.push('image-generation');
+      // 如果已经有 vision 能力，保持 vision
+      if (!capabilities.includes('vision')) {
+        category = 'image-to-image';
+      }
+    }
+
+    // 测试 3: 检查是否支持 image-editing（图生图）
+    const imageEditModels = ['gpt-image-1', 'wanx-v1'];
+    if (imageEditModels.some(m => model.toLowerCase().includes(m))) {
+      if (!capabilities.includes('image-editing')) {
+        capabilities.push('image-editing');
+      }
+    }
+
+    // 如果只有 text 能力
+    if (capabilities.length === 0) {
+      capabilities.push('text');
+    }
+
+    console.log('[Detect Capabilities] Result:', { capabilities, category });
+
+    res.json({
+      success: true,
+      data: {
+        capabilities,
+        category,
+      }
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors });
+    } else {
+      next(error);
+    }
+  }
+});
+
 export default router;

@@ -21,7 +21,11 @@ export interface GenerationRecord {
 
 export interface VisionAnalysisResult {
   analysis: { zh: string; en: string };
+  category?: string;  // 分析类型
 }
+
+// 分析类别类型
+export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
 export type FeatureType = 'inspiration' | 'character' | 'threeview' | 'poster' | 'cg';
 

@@ -8,6 +8,12 @@ Lightbulb AI 是一个本地部署的 AI 创作辅助网站，提供灵感提示
 ### 1. 灵感提示
 用户通过拖拽或点击上传图片，系统调用 Vision LLM 分析图片，自动生成描述图片色彩风格、表面质感、比例体系等维度的提示词。
 
+**分析类型选择**：支持按类型差异化分析，提升分析质量：
+- 🧑 **角色**：含人体比例分析（头身比、三庭五眼、肩宽腰宽比例、上下身比例、四肢比例等）
+- 🏔️ **风景**：场景构图分析（空间层次、透视关系、环境元素、空间深度感）
+- 📦 **物品**：材质细节分析（造型结构、表面纹理、光影反射、配色方案）
+- ✨ **其他**：通用画风分析（绘画风格、线条质感、色彩倾向、光影处理、材质表现）
+
 ### 2. 角色生图
 用户在文本框中输入提示词，选择已配置的 AI 模型，调用 OpenAI DALL-E / GPT-Image 生成图片。
 
@@ -58,7 +64,7 @@ npm install
 7. （可选）点击"检测 Vision 能力"检查模型是否支持多模态
 8. 点击"保存到模型管理"
 
-**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞、自定义），支持真实 API 连通性检测和 Vision 能力识别。模型类型会根据所选模型自动识别。
+**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞、自定义），支持真实 API 连通性检测和**模型能力自动识别**（vision/text-to-image/image-to-image）。保存时自动检测模型类型。
 
 ### 启动开发服务器
 
@@ -91,7 +97,7 @@ npm run dev
 | `/api/model-configs/:id` | PUT | 更新模型配置 |
 | `/api/model-configs/:id` | DELETE | 删除模型配置 |
 | `/api/model-configs/test-connection` | POST | 测试 API 连通性 |
-| `/api/model-configs/detect-vision` | POST | 检测 Vision 多模态能力 |
+| `/api/model-configs/detect-capabilities` | POST | 自动检测模型能力（vision/text-to-image/image-to-image） |
 | `/health` | GET | 健康检查 |
 
 ## 数据存储
@@ -143,30 +149,39 @@ d:/Program Files (x86)/lightbulb-AI/
 ├── frontend/                          # React 前端项目
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ModelSelector.tsx      # [重构] 模型管理弹窗（支持真实API检测和Vision检测）
+│   │   │   ├── ModelSelector.tsx      # [保留] 独立模型选择组件
+│   │   │   ├── ModelManagerContent.tsx # [新增] 模型管理弹窗内容（嵌入头像菜单）
+│   │   │   ├── AvatarMenu.tsx        # [更新] 集成模型管理入口
 │   │   │   ├── ModelDropdown.tsx      # [新增] 页面顶部模型下拉选择器
 │   │   │   ├── AvatarMenu.tsx        # [更新] "模型配置" → "模型管理"
 │   │   │   └── ui/                   # shadcn/ui 组件
 │   │   ├── pages/
-│   │   │   ├── InspirationPage.tsx    # [更新] 顶部 Vision 模型选择器
+│   │   │   ├── InspirationPage.tsx    # [更新] 分析类型选择器 + Vision 模型选择器
 │   │   │   ├── CharacterGenPage.tsx  # [更新] 顶部文生图模型选择器
 │   │   │   ├── ThreeViewPage.tsx      # [更新] 顶部图生图模型选择器 + 16:9锁定
 │   │   │   └── PosterGenPage.tsx      # [更新] 顶部图生图模型选择器 + 尺寸选择
 │   │   ├── hooks/
 │   │   │   └── useApiConfig.ts        # [重构] 支持模型分类和数据库持久化
 │   │   ├── services/
-│   │   │   ├── api.ts                # [更新] 新增模型管理API
+│   │   │   ├── api.ts                # [更新] 新增模型管理API + category 参数
 │   │   │   └── storage.ts            # [更新] 支持模型配置数据库操作
+│   │   ├── hooks/
+│   │   │   └── useGeneration.ts      # [更新] analyze() 支持 category 参数
 │   │   └── types/
-│   │       ├── index.ts              # [更新] 新增 ModelCategory, ModelConfig 类型
-│   │       └── api.ts                # [更新] 新增模型管理 API 类型
+│   │       ├── index.ts              # [更新] 新增 ModelCategory, ModelConfig, AnalysisCategory 类型
+│   │       └── api.ts                # [更新] 新增模型管理 API 类型 + AnalysisCategory
 ├── backend/
 │   ├── src/
 │   │   ├── database.ts                # [更新] 新增 model_configs 表
 │   │   ├── app.ts                    # [更新] 注册模型配置路由
+│   │   ├── middleware/
+│   │   │   └── validateRequest.ts     # [更新] analyzeSchema 支持 category 参数
+│   │   ├── services/
+│   │   │   ├── visionService.ts       # [更新] 差异化分析 prompt 工厂 + 角色比例分析
+│   │   │   └── posterService.ts
 │   │   └── routes/
 │   │       ├── modelConfigs.ts        # [新增] 模型配置 CRUD + API检测 + Vision检测
-│   │       ├── generate.ts
+│   │       ├── generate.ts            # [更新] vision/analyze 透传 category 参数
 │   │       └── records.ts
 └── README.md                          # [更新] 新功能说明和数据库结构
 ```

@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { AvatarMenu } from './AvatarMenu';
-import { ModelSelector } from './ModelSelector';
 import type { FeatureType } from '@/types';
 
 interface HeaderProps {
@@ -98,10 +97,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
         </select>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <ModelSelector />
-          <AvatarMenu onOpenRecords={onOpenRecords} />
-        </div>
+        <AvatarMenu onOpenRecords={onOpenRecords} />
       </div>
     </header>
   );

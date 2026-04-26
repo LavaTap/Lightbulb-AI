@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { visionApi, imageApi, posterApi, recordsApi } from '@/services/api';
 import { getCurrentProvider, getConfig } from '@/services/storage';
-import type { VisionAnalysisResult } from '@/types';
+import type { VisionAnalysisResult, AnalysisCategory } from '@/types';
 import type { CreateRecordRequest } from '@/types/api';
 
 interface UseGenerationReturn {
   isLoading: boolean;
   error: string | null;
-  analyze: (imageBase64: string) => Promise<VisionAnalysisResult>;
+  analyze: (imageBase64: string, category?: AnalysisCategory) => Promise<VisionAnalysisResult>;
   generate: (prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024') => Promise<string>;
   generateThreeView: (referenceImage: string, analysisPrompt: string, userPrompt?: string) => Promise<string[]>;
   generatePoster: (images: string[], prompt: string) => Promise<string>;
@@ -28,19 +28,19 @@ export function useGeneration(): UseGenerationReturn {
     }
   }, []);
 
-  const analyze = useCallback(async (imageBase64: string): Promise<VisionAnalysisResult> => {
+  const analyze = useCallback(async (imageBase64: string, category?: AnalysisCategory): Promise<VisionAnalysisResult> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const provider = getCurrentProvider();
       const config = getConfig(provider);
-      
+
       if (!config) {
         throw new Error('请先配置 API Key');
       }
-      
-      const response = await visionApi.analyze({ imageBase64, config });
+
+      const response = await visionApi.analyze({ imageBase64, config, category });
       
       // Compress upload image for storage (200px thumbnail)
       const compressedImage = await compressImageAsBase64(imageBase64, 200, 0.7);
