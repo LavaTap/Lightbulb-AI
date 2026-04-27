@@ -64,7 +64,7 @@ npm install
 7. （可选）点击"检测 Vision 能力"检查模型是否支持多模态
 8. 点击"保存到模型管理"
 
-**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞、自定义），支持真实 API 连通性检测和**模型能力自动识别**（vision/text-to-image/image-to-image）。保存时自动检测模型类型。
+**支持多服务商配置**：可以为不同服务商分别保存配置（OpenAI、DeepSeek、Google、讯飞等），支持真实 API 连通性检测和**模型能力自动识别**（vision/text-to-image/image-to-image/text）。保存时自动检测模型类型。
 
 ### 启动开发服务器
 
@@ -97,7 +97,7 @@ npm run dev
 | `/api/model-configs/:id` | PUT | 更新模型配置 |
 | `/api/model-configs/:id` | DELETE | 删除模型配置 |
 | `/api/model-configs/test-connection` | POST | 测试 API 连通性 |
-| `/api/model-configs/detect-capabilities` | POST | 自动检测模型能力（vision/text-to-image/image-to-image） |
+| `/api/model-configs/detect-capabilities` | POST | 自动检测模型能力（vision/text-to-image/image-to-image/text） |
 | `/health` | GET | 健康检查 |
 
 ## 数据存储
@@ -116,12 +116,24 @@ npm run dev
 
 ### 文生图模型
 - **OpenAI**: DALL-E 3, GPT Image 1
-- **Google Gemini**: Imagen 3
-- **讯飞**: Qwen-Image
+- **Google Gemini**: Imagen 3, Imagen 4
+- **阿里云**: Wanx 2.1
+- **字节跳动**: Seedance
+- **百度**: 文心一格
 
 ### 图生图模型
 - **OpenAI**: GPT Image 1
+- **阿里云**: Wanx v1
 - **讯飞**: Wanx
+
+### 纯文本模型 (Text Only)
+- **OpenAI**: GPT-4 Turbo, o1, o3-mini, GPT-3.5 Turbo
+- **Google Gemini**: Gemini 2.5 Flash Lite, Gemini 2.5 Pro Lite
+- **DeepSeek**: DeepSeek V3 (deepseek-chat), DeepSeek R1, DeepSeek Coder
+- **阿里云 通义千问**: Qwen Max, Qwen Plus, Qwen Turbo, Qwen Coder Plus
+- **字节跳动 豆包**: 豆包 Pro-32K/128K, 豆包 Lite-32K
+- **百度 文心一言**: 文心 4.0, 文心 4.0 Turbo, 文心 Speed, 文心 Lite
+- **讯飞星火**: 星火 4.0 Ultra, 星火 4.0 Pro/Lite, 星火 3.5
 
 ## 构建生产版本
 
@@ -150,16 +162,16 @@ d:/Program Files (x86)/lightbulb-AI/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── ModelSelector.tsx      # [保留] 独立模型选择组件
-│   │   │   ├── ModelManagerContent.tsx # [新增] 模型管理弹窗内容（嵌入头像菜单）
+│   │   │   ├── ModelManagerContent.tsx # [更新] 已保存配置支持编辑 + 新增纯文本(text)模型类型
 │   │   │   ├── AvatarMenu.tsx        # [更新] 集成模型管理入口
 │   │   │   ├── ModelDropdown.tsx      # [新增] 页面顶部模型下拉选择器
 │   │   │   ├── AvatarMenu.tsx        # [更新] "模型配置" → "模型管理"
 │   │   │   └── ui/                   # shadcn/ui 组件
 │   │   ├── pages/
-│   │   │   ├── InspirationPage.tsx    # [更新] 分析类型选择器 + Vision 模型选择器
-│   │   │   ├── CharacterGenPage.tsx  # [更新] 顶部文生图模型选择器
-│   │   │   ├── ThreeViewPage.tsx      # [更新] 顶部图生图模型选择器 + 16:9锁定
-│   │   │   └── PosterGenPage.tsx      # [更新] 顶部图生图模型选择器 + 尺寸选择
+│   │   │   ├── InspirationPage.tsx    # [更新] 分析类型选择器 + 模型下拉移至面板右上角
+│   │   │   ├── CharacterGenPage.tsx  # [更新] 模型下拉移至面板右上角
+│   │   │   ├── ThreeViewPage.tsx      # [更新] 模型下拉移至面板右上角 + 16:9锁定
+│   │   │   └── PosterGenPage.tsx      # [更新] 模型下拉移至面板右上角 + 尺寸选择
 │   │   ├── hooks/
 │   │   │   └── useApiConfig.ts        # [重构] 支持模型分类和数据库持久化
 │   │   ├── services/
@@ -168,7 +180,7 @@ d:/Program Files (x86)/lightbulb-AI/
 │   │   ├── hooks/
 │   │   │   └── useGeneration.ts      # [更新] analyze() 支持 category 参数
 │   │   └── types/
-│   │       ├── index.ts              # [更新] 新增 ModelCategory, ModelConfig, AnalysisCategory 类型
+│   │       ├── index.ts              # [更新] ModelCategory 新增 'text' 纯文本类型
 │   │       └── api.ts                # [更新] 新增模型管理 API 类型 + AnalysisCategory
 ├── backend/
 │   ├── src/

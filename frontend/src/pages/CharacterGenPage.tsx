@@ -44,27 +44,23 @@ export function CharacterGenPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Header with model selector */}
-      <div className="flex items-center justify-between">
-        <div className="text-center flex-1 space-y-2">
-          <h1 className="text-3xl font-bold gradient-text">角色生图</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            输入提示词，AI 将生成角色图片
-          </p>
-        </div>
-        <div className="flex-shrink-0">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold gradient-text">角色生图</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          输入提示词，AI 将生成角色图片
+        </p>
+      </div>
+
+      {/* Prompt Input */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle>提示词</CardTitle>
           <ModelDropdown
             category="text-to-image"
             selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />
-        </div>
-      </div>
-
-      {/* Prompt Input */}
-      <Card>
-        <CardHeader>
-          <CardTitle>提示词</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea

@@ -79,30 +79,26 @@ export function PosterGenPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Header with model selector */}
-      <div className="flex items-center justify-between">
-        <div className="text-center flex-1 space-y-2">
-          <h1 className="text-3xl font-bold gradient-text">海报生成</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            上传角色参考图 <strong>+</strong> 输入描述提示词（图文必填），AI 将按所选尺寸生成海报
-          </p>
-        </div>
-        <div className="flex-shrink-0">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold gradient-text">海报生成</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          上传角色参考图 <strong>+</strong> 输入描述提示词（图文必填），AI 将按所选尺寸生成海报
+        </p>
+      </div>
+
+      {/* Size Selection - Dropdown */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Image className="w-5 h-5" />
+            海报尺寸
+          </CardTitle>
           <ModelDropdown
             category="image-to-image"
             selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />
-        </div>
-      </div>
-
-      {/* Size Selection - Dropdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Image className="w-5 h-5" />
-            海报尺寸
-          </CardTitle>
         </CardHeader>
         <CardContent>
           <Select value={posterSizeKey} onValueChange={setPosterSizeKey}>
