@@ -49,21 +49,12 @@ export function ThreeViewPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Header with model selector */}
-      <div className="flex items-center justify-between">
-        <div className="text-center flex-1 space-y-2">
-          <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            上传角色参考图，<strong>同时输入提示词（必填）</strong>，AI 将结合两者生成三张2K高清三视图
-          </p>
-        </div>
-        <div className="flex-shrink-0">
-          <ModelDropdown
-            category="image-to-image"
-            selectedModel={selectedModel}
-            onModelChange={handleModelChange}
-          />
-        </div>
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          上传角色参考图，<strong>同时输入提示词（必填）</strong>，AI 将结合两者生成三张2K高清三视图
+        </p>
       </div>
 
       {/* 16:9 Size Notice */}
@@ -92,13 +83,18 @@ export function ThreeViewPage() {
 
       {/* User Custom Prompt Input */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="text-base font-semibold flex items-center gap-2">
             提示词（必填）
             {!userPrompt.trim() && (
               <span className="text-xs text-red-500 font-normal">* 请输入描述</span>
             )}
-          </CardTitle>
+          </div>
+          <ModelDropdown
+            category="image-to-image"
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
+          />
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea

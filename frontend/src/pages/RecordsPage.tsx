@@ -147,7 +147,7 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
                     )}
                     
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedRecord(record)}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 text-xs">
                           {FEATURE_ICONS[record.featureType]}

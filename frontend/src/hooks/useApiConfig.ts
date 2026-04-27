@@ -155,6 +155,20 @@ export function useApiConfig() {
     await loadModelConfigs();
   }, [loadModelConfigs]);
 
+  // Update model config by ID
+  const updateModelConfigById = useCallback(async (
+    id: number,
+    data: {
+      name?: string;
+      provider?: string;
+      model?: string;
+      category?: string;
+    }
+  ) => {
+    await modelConfigsApi.update(id, data);
+    await loadModelConfigs();
+  }, [loadModelConfigs]);
+
   return {
     currentProvider,
     configs,
@@ -170,6 +184,7 @@ export function useApiConfig() {
     testConnection,
     detectCapabilities,
     deleteModelConfig: deleteModelConfigById,
+    updateModelConfig: updateModelConfigById,
     reloadModelConfigs: loadModelConfigs,
   };
 }

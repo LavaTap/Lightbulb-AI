@@ -85,30 +85,26 @@ export function InspirationPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Header with model selector */}
-      <div className="flex items-center justify-between">
-        <div className="text-center flex-1 space-y-2">
-          <h1 className="text-3xl font-bold gradient-text ml-8">灵感提示</h1>
-          <p className="text-gray-600 dark:text-gray-400 ml-8">
-            上传图片，AI 将分析并生成描述性提示词
-          </p>
-        </div>
-        <div className="flex-shrink-0">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold gradient-text">灵感提示</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          上传图片，AI 将分析并生成描述性提示词
+        </p>
+      </div>
+
+      {/* Upload Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary-500" />
+            上传图片
+          </CardTitle>
           <ModelDropdown
             category="vision"
             selectedModel={selectedVisionModel}
             onModelChange={handleModelChange}
           />
-        </div>
-      </div>
-
-      {/* Upload Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-500" />
-            上传图片
-          </CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUploadZone
@@ -152,31 +148,44 @@ export function InspirationPage() {
               const Icon = cat.icon;
               const isSelected = selectedCategory === cat.value;
               return (
-                <button
+                <motion.button
                   key={cat.value}
                   onClick={() => setSelectedCategory(cat.value)}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
-                    'hover:border-primary/50 hover:bg-primary/5',
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-sm'
-                      : 'border-gray-200 dark:border-gray-700 bg-transparent'
-                  )}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  animate={{
+                    borderColor: isSelected
+                      ? 'hsl(var(--muted-foreground))'
+                      : 'hsl(var(--border))',
+                    backgroundColor: isSelected
+                      ? 'hsl(var(--muted) / 0.5)'
+                      : 'transparent',
+                    boxShadow: isSelected
+                      ? '0 0 0 1px hsl(var(--muted-foreground) / 0.3)'
+                      : 'none',
+                  }}
+                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg border-2"
                 >
-                  <Icon className={cn(
-                    'w-8 h-8 transition-colors',
-                    isSelected ? 'text-primary' : 'text-gray-500 dark:text-gray-400'
-                  )} />
+                  <motion.div
+                    animate={{ scale: isSelected ? 1.08 : 1 }}
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <Icon className={cn(
+                      'w-8 h-8',
+                      isSelected ? 'text-foreground' : 'text-muted-foreground'
+                    )} />
+                  </motion.div>
                   <span className={cn(
                     'font-medium',
-                    isSelected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'
+                    isSelected ? 'text-foreground' : 'text-muted-foreground'
                   )}>
                     {cat.label}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-muted-foreground">
                     {cat.description}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
           </div>
