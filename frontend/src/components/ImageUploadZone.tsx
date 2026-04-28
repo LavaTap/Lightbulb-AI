@@ -9,6 +9,7 @@ interface ImageUploadZoneProps {
   multiple?: boolean;
   maxImages?: number;
   className?: string;
+  hidePreview?: boolean;
 }
 
 export function ImageUploadZone({
@@ -17,6 +18,7 @@ export function ImageUploadZone({
   multiple = false,
   maxImages = 10,
   className,
+  hidePreview = false,
 }: ImageUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -96,7 +98,7 @@ export function ImageUploadZone({
         </p>
       </div>
 
-      {images.length > 0 && (
+      {!hidePreview && images.length > 0 && (
         <div className={cn(
           "grid gap-4",
           multiple ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1"
