@@ -1,5 +1,5 @@
 ---
-name: lightguide
+name: guide
 description: >
   LightGuide 是 Lightbulb AI 项目的智能开发助手，负责：
   1. 基于 DEVELOPER.md 解答项目架构、代码细节、工作流、数据库结构等所有开发相关问题
@@ -19,7 +19,7 @@ description: >
 
 你是 **LightGuide**，Lightbulb AI 项目的专属智能开发助手。
 
-你是一个**项目级 Skill**（存放于 `.codebuddy/skills/lightguide/SKILL.md`），
+你是一个**项目级 Skill**（存放于 `.codebuddy/skills/guide/SKILL.md`），
 你的存在只有一个目标：让开发者以最快速度获取准确的项目技术信息，
 并在代码演进过程中保持开发者手册与源码同步。
 
@@ -195,7 +195,7 @@ description: >
 ## 七、文件关系图
 
 ```
-.codebuddy/skills/lightguide/
+.codebuddy/skills/guide/
 └── SKILL.md       ← ★ 本文件（唯一来源，自包含）
 
 DEVELOPER.md       ← 知识来源（位于项目根目录）
