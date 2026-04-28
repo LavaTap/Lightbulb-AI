@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Sparkles, Wand2, Image, FileImage, Loader2, X, Download, Eye } from 'lucide-react';
+import { Trash2, Sparkles, Wand2, Image, FileImage, Loader2, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RecordDetailDialog } from '@/components/RecordDetailDialog';
 import { recordsApi } from '@/services/api';
 import { formatRelativeTime, formatTokens, base64ToDataUrl } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -24,8 +25,6 @@ const FEATURE_LABELS: Record<string, string> = {
   threeview: '角色三视图',
   poster: '海报生成',
 };
-
-const VIEW_LABELS = ['正面', '侧面', '背面'];
 
 export function RecordsPage({ embedded }: RecordsPageProps) {
   const [records, setRecords] = useState<GenerationRecord[]>([]);
@@ -51,6 +50,17 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
     }
   };
 
+  const formatPrompt = (prompt: string | undefined): string => {
+    if (!prompt) return '';
+    try {
+      const parsed = JSON.parse(prompt);
+      if (parsed.analysis) {
+        return parsed.analysis.zh || parsed.analysis.en || '';
+      }
+    } catch { /* ignore */ }
+    return prompt;
+  };
+
   const handleDelete = async (id: number) => {
     try {
       await recordsApi.delete(id);
@@ -61,27 +71,6 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
     } catch (error) {
       console.error('Failed to delete record:', error);
     }
-  };
-
-  const handleDownload = (base64: string, filename: string) => {
-    const link = document.createElement('a');
-    link.href = base64ToDataUrl(base64);
-    link.download = filename;
-    link.click();
-  };
-
-  const formatPrompt = (prompt: string | undefined): string => {
-    if (!prompt) return '';
-    try {
-      const parsed = JSON.parse(prompt);
-      // If it's inspiration analysis result, format nicely
-      if (parsed.analysis) {
-        return parsed.analysis.zh || parsed.analysis.en || '';
-      }
-    } catch {
-      // Just return as-is
-    }
-    return prompt;
   };
 
   return (
@@ -201,114 +190,18 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {selectedRecord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h3 className="text-lg font-semibold">
-                {FEATURE_LABELS[selectedRecord.featureType] || selectedRecord.featureType} - 详情
-              </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedRecord(null)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)] space-y-4">
-              {/* Generated Images */}
-              {selectedRecord.generatedImages && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">
-                      {selectedRecord.featureType === 'threeview' ? '生成图片（三视图）' : '生成图片'}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const images = selectedRecord.generatedImages!.split(',');
-                        if (images.length === 1) {
-                          handleDownload(images[0], 'generated.png');
-                        } else {
-                          // For multiple images, download each
-                          images.forEach((img, i) => {
-                            handleDownload(img, `generated-${i + 1}.png`);
-                          });
-                        }
-                      }}
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      下载
-                    </Button>
-                  </div>
-                  <div className={selectedRecord.generatedImages.includes(',') ? 'grid grid-cols-3 gap-2' : ''}>
-                    {selectedRecord.generatedImages.split(',').map((img, i) => (
-                      <div key={i} className="relative">
-                        <img
-                          src={base64ToDataUrl(img)}
-                          alt={`Generated ${i + 1}`}
-                          className="w-full rounded-lg"
-                        />
-                        {selectedRecord.generatedImages.includes(',') && (
-                          <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
-                            {VIEW_LABELS[i] || `图片${i + 1}`}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Upload Image */}
-              {selectedRecord.uploadImages && (
-                <div>
-                  <span className="text-sm font-medium block mb-2">参考图片</span>
-                  <img
-                    src={base64ToDataUrl(selectedRecord.uploadImages)}
-                    alt="Upload"
-                    className="max-h-48 rounded-lg"
-                  />
-                </div>
-              )}
-
-              {/* Prompt */}
-              {selectedRecord.prompt && (
-                <div>
-                  <span className="text-sm font-medium block mb-2">提示词</span>
-                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm whitespace-pre-wrap">
-                    {formatPrompt(selectedRecord.prompt)}
-                  </div>
-                </div>
-              )}
-
-              {/* Meta Info */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">服务商</span>
-                  <p className="font-medium">{selectedRecord.modelProvider}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">模型</span>
-                  <p className="font-medium">{selectedRecord.modelName}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Token消耗</span>
-                  <p className="font-medium">{formatTokens(selectedRecord.tokenUsage)}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">生成时间</span>
-                  <p className="font-medium">{new Date(selectedRecord.createdAt).toLocaleString('zh-CN')}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Detail Dialog */}
+      <RecordDetailDialog
+        record={selectedRecord}
+        open={!!selectedRecord}
+        onOpenChange={(open) => { if (!open) setSelectedRecord(null); }}
+        onDownload={(base64, filename) => {
+          const link = document.createElement('a');
+          link.href = base64ToDataUrl(base64);
+          link.download = filename;
+          link.click();
+        }}
+      />
     </>
   );
 }

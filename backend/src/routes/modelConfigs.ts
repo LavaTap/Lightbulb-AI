@@ -269,19 +269,40 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
         }
       }
       
+      // 判断是否为图像生成模型
+      const imageModelPatterns = /^(image|dall|z-image|flux|stable-diffusion|sd|midjourney|imagen)/i;
+      const isImageModel = imageModelPatterns.test(data.model);
+      
       try {
-        const response = await axios.post(
-          `${baseUrl}/chat/completions`,
-          {
-            model: data.model,
-            messages: [{ role: 'user', content: 'OK' }],
-            max_tokens: 10,
-          },
-          { headers, timeout: 15000 }
-        );
-        
-        success = response.status === 200 && response.data?.choices;
-        message = 'API 连接成功';
+        if (isImageModel) {
+          // 图像生成模型：测试 /images/generations 端点
+          const response = await axios.post(
+            `${baseUrl}/images/generations`,
+            {
+              model: data.model,
+              prompt: 'A simple blue circle on white background',
+              n: 1,
+              size: '256x256',
+            },
+            { headers, timeout: 30000 }
+          );
+          success = response.status === 200 && response.data?.data;
+          message = 'API 连接成功（图像模型）';
+        } else {
+          // 聊天/文本模型：测试 /chat/completions 端点
+          const response = await axios.post(
+            `${baseUrl}/chat/completions`,
+            {
+              model: data.model,
+              messages: [{ role: 'user', content: '测试连接，请回复OK' }],
+              max_tokens: 10,
+            },
+            { headers, timeout: 15000 }
+          );
+          
+          success = response.status === 200 && response.data?.choices;
+          message = 'API 连接成功';
+        }
       } catch (err: any) {
         if (err.response?.status === 401) {
           message = 'API Key 无效';
