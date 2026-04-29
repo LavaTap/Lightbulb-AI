@@ -49,6 +49,8 @@ export const createRecordSchema = z.object({
   prompt: z.string().optional(),
   uploadImages: z.string().optional(),
   generatedImages: z.string().optional(),
+  uploadImagesOriginal: z.string().optional(),    // 原图 base64
+  generatedImagesOriginal: z.string().optional(), // 原图 base64
   modelProvider: z.string().min(1),
   modelName: z.string().min(1),
   tokenUsage: z.number().int().min(0),

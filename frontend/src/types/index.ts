@@ -13,6 +13,8 @@ export interface GenerationRecord {
   prompt?: string;
   uploadImages: string[];
   generatedImages: string[];
+  uploadImagesOriginal?: string[];   // 原图 base64 数组
+  generatedImagesOriginal?: string[]; // 原图 base64 数组
   modelProvider: string;
   modelName: string;
   tokenUsage: number;
@@ -30,7 +32,7 @@ export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 export type FeatureType = 'inspiration' | 'character' | 'threeview' | 'poster' | 'cg';
 
 // Model capability categories
-export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'text';
+export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'multimodal' | 'text';
 
 // Model configuration for storage
 export interface ModelConfig {

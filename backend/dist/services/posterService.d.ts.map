@@ -1,0 +1,1 @@
+{"version":3,"file":"posterService.d.ts","sourceRoot":"","sources":["../../src/services/posterService.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,mBAAmB,CAAC;AAEnD,wBAAsB,cAAc,CAClC,MAAM,EAAE,MAAM,EAAE,EAChB,MAAM,EAAE,MAAM,EACd,MAAM,EAAE,SAAS,GAChB,OAAO,CAAC;IAAE,WAAW,EAAE,MAAM,CAAC;IAAC,UAAU,EAAE,MAAM,CAAA;CAAE,CAAC,CAmCtD"}

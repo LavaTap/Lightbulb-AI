@@ -113,9 +113,10 @@ export function useApiConfig() {
     }
   }, [loadModelConfigs]);
 
-  // Get configs filtered by category
-  const getConfigsByCategory = useCallback((category: ModelCategory) => {
-    return modelConfigs.filter(c => c.category === category);
+  // Get configs filtered by category (supports single value or array of categories)
+  const getConfigsByCategory = useCallback((category: ModelCategory | ModelCategory[]) => {
+    const categories = Array.isArray(category) ? category : [category];
+    return modelConfigs.filter(c => categories.includes(c.category));
   }, [modelConfigs]);
 
   // Set selected category

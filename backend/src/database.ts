@@ -36,12 +36,25 @@ function initDatabase(database: SqlJsDatabase): void {
       prompt TEXT,
       upload_images TEXT,
       generated_images TEXT,
+      upload_images_original TEXT,
+      generated_images_original TEXT,
       model_provider TEXT,
       model_name TEXT,
       token_usage INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // 兼容旧数据库：检查并添加 Original 字段
+  const columnsResult = database.exec("PRAGMA table_info(generation_records)");
+  const existingColumns = columnsResult[0]?.values?.map((row: any[]) => row[1]) || [];
+  
+  if (!existingColumns.includes('upload_images_original')) {
+    database.run(`ALTER TABLE generation_records ADD COLUMN upload_images_original TEXT`);
+  }
+  if (!existingColumns.includes('generated_images_original')) {
+    database.run(`ALTER TABLE generation_records ADD COLUMN generated_images_original TEXT`);
+  }
 
   database.run(`
     CREATE TABLE IF NOT EXISTS model_configs (

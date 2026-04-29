@@ -55,6 +55,8 @@ export interface CreateRecordRequest {
   prompt?: string;
   uploadImages?: string;
   generatedImages?: string;
+  uploadImagesOriginal?: string;   // 原图 base64
+  generatedImagesOriginal?: string; // 原图 base64
   modelProvider: string;
   modelName: string;
   tokenUsage: number;

@@ -81,11 +81,11 @@ export function InspirationPage() {
                 <Sparkles className="w-5 h-5 text-primary-500" />
                 上传图片
               </CardTitle>
-              <ModelDropdown
-                category="vision"
-                selectedModel={selectedVisionModel}
-                onModelChange={handleModelChange}
-              />
+          <ModelDropdown
+            category={['vision', 'multimodal']}
+            selectedModel={selectedVisionModel}
+            onModelChange={handleModelChange}
+          />
             </CardHeader>
             <CardContent>
               <ImageUploadZone

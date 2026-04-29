@@ -95,7 +95,7 @@ export function PosterGenPage() {
             海报尺寸
           </CardTitle>
           <ModelDropdown
-            category="image-to-image"
+            category="multimodal"
             selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />

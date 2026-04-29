@@ -129,6 +129,7 @@ const CATEGORY_OPTIONS = [
   { value: 'vision', label: '多模态 (Vision)' },
   { value: 'text-to-image', label: '文生图 (Text to Image)' },
   { value: 'image-to-image', label: '图生图 (Image to Image)' },
+  { value: 'multimodal', label: '图文多模态 (Multimodal)' },
   { value: 'text', label: '纯文本 (Text Only)' },
 ];
 
@@ -149,6 +150,9 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
+
+  // 已保存配置的测试状态（按 config.id 索引）
+  const [configTestMap, setConfigTestMap] = useState<Record<number, { loading: boolean; result: { success: boolean; message: string } | null }>>({});
 
   // 编辑模式状态
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -285,6 +289,41 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
   const handleDelete = async (id: number) => {
     if (confirm('确定要删除这个模型配置吗？')) {
       await deleteModelConfig(id);
+      // 清除该配置的测试状态
+      setConfigTestMap(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
+  // 测试已保存的配置连接
+  const handleTestSavedConfig = async (config: any) => {
+    setConfigTestMap(prev => ({
+      ...prev,
+      [config.id]: { loading: true, result: null },
+    }));
+
+    try {
+      const result = await testConnection({
+        provider: config.provider,
+        apiKey: config.apiKey || '',
+        model: config.model,
+        endpoint: config.endpoint,
+        useProxy: config.useProxy,
+        proxyEndpoint: config.proxyEndpoint,
+      });
+
+      setConfigTestMap(prev => ({
+        ...prev,
+        [config.id]: { loading: false, result: { success: result.success, message: result.message } },
+      }));
+    } catch (e: any) {
+      setConfigTestMap(prev => ({
+        ...prev,
+        [config.id]: { loading: false, result: { success: false, message: e.message } },
+      }));
     }
   };
 
@@ -423,6 +462,18 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
                           <h3 className="font-semibold text-sm">{config.name}</h3>
                           <div className="flex items-center gap-1">
                             <button
+                              onClick={() => handleTestSavedConfig(config)}
+                              disabled={configTestMap[config.id]?.loading}
+                              className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-colors"
+                              title="测试连接"
+                            >
+                              {configTestMap[config.id]?.loading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
                               onClick={() => handleStartEdit(config)}
                               className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                               title="编辑"
@@ -443,17 +494,30 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
                           <span>模型: {config.model}</span>
                           <span className={cn(
                             "px-1.5 py-0.5 rounded",
-                            config.category === 'vision'
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                              : config.category === 'text-to-image'
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                : config.category === 'image-to-image'
-                                  ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            config.category === 'multimodal'
+                              ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                              : config.category === 'vision'
+                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                : config.category === 'text-to-image'
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : config.category === 'image-to-image'
+                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                           )}>
-                            类型: {config.category === 'vision' ? '多模态' : config.category === 'text-to-image' ? '文生图' : config.category === 'image-to-image' ? '图生图' : '纯文本'}
+                            类型: {config.category === 'multimodal' ? '图文多模态' : config.category === 'vision' ? '多模态' : config.category === 'text-to-image' ? '文生图' : config.category === 'image-to-image' ? '图生图' : '纯文本'}
                           </span>
                         </div>
+                        {/* 测试结果显示 */}
+                        {configTestMap[config.id]?.result && (
+                          <div className={cn(
+                            "mt-2 p-2 rounded-md text-xs",
+                            configTestMap[config.id].result!.success
+                              ? "bg-green-50 text-green-700 dark:bg-green-900/15 dark:text-green-400"
+                              : "bg-red-50 text-red-700 dark:bg-red-900/15 dark:text-red-400"
+                          )}>
+                            {configTestMap[config.id].result!.message}
+                          </div>
+                        )}
                       </>
                     )}
                   </CardContent>
@@ -485,22 +549,26 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="model">选择模型</Label>
-            <Select value={model} onValueChange={handleModelChange}>
-              <SelectTrigger><SelectValue placeholder="选择或输入模型" /></SelectTrigger>
-              <SelectContent>
-                {PROVIDERS.find(p => p.id === selectedProvider)?.models.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.name} - {m.description}</SelectItem>
-                ))}
-                {(selectedProvider === 'custom' || !PROVIDERS.find(p => p.id === selectedProvider)?.models.some(m => m.id === model)) && (
-                  <input
-                    className="w-full px-2 py-1.5 text-sm border-t"
-                    placeholder="输入自定义模型 ID"
-                    onChange={(e) => setModel(e.target.value)}
-                  />
-                )}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="model">
+              {selectedProvider === 'custom' ? '模型 ID' : '选择模型'}
+            </Label>
+            {selectedProvider === 'custom' ? (
+              <Input
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="输入自定义模型 ID，如: gpt-4o、claude-3.5-sonnet..."
+                className="h-9 text-sm"
+              />
+            ) : (
+              <Select value={model} onValueChange={handleModelChange}>
+                <SelectTrigger><SelectValue placeholder="选择或输入模型" /></SelectTrigger>
+                <SelectContent>
+                  {PROVIDERS.find(p => p.id === selectedProvider)?.models.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.name} - {m.description}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* 自定义模式：手动选择类型 */}

@@ -39,6 +39,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       prompt: r.prompt,
       uploadImages: r.upload_images,
       generatedImages: r.generated_images,
+      uploadImagesOriginal: r.upload_images_original,   // 原图
+      generatedImagesOriginal: r.generated_images_original, // 原图
       modelProvider: r.model_provider,
       modelName: r.model_name,
       tokenUsage: r.token_usage,
@@ -69,13 +71,15 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     
     db.run(`
       INSERT INTO generation_records 
-      (feature_type, prompt, upload_images, generated_images, model_provider, model_name, token_usage)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (feature_type, prompt, upload_images, generated_images, upload_images_original, generated_images_original, model_provider, model_name, token_usage)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       data.featureType,
       data.prompt || null,
       data.uploadImages || null,
       data.generatedImages || null,
+      data.uploadImagesOriginal || null,  // 原图
+      data.generatedImagesOriginal || null, // 原图
       data.modelProvider,
       data.modelName,
       data.tokenUsage

@@ -96,7 +96,7 @@ export function ThreeViewPage() {
                 )}
               </div>
               <ModelDropdown
-                category="image-to-image"
+                category="multimodal"
                 selectedModel={selectedModel}
                 onModelChange={handleModelChange}
               />

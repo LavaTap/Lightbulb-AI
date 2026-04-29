@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type { ModelCategory, ModelConfig } from '@/types';
 
 interface ModelDropdownProps {
-  category: ModelCategory;
+  category: ModelCategory | ModelCategory[];
   selectedModel: string;
   onModelChange: (modelId: string, config: ModelConfig) => void;
 }
@@ -17,12 +17,20 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
   const filteredConfigs = getConfigsByCategory(category);
   
   const selectedConfig = filteredConfigs.find(c => c.model === selectedModel || c.id.toString() === selectedModel);
+
+  const categories = Array.isArray(category) ? category : [category];
   
   const categoryLabels: Record<string, string> = {
     vision: '多模态 / 视觉分析',
     'text-to-image': '文生图',
     'image-to-image': '图生图',
+    multimodal: '图文多模态',
+    text: '纯文本',
   };
+
+  const label = categories.length > 1
+    ? categories.map(c => categoryLabels[c] || c).join(' / ')
+    : (categoryLabels[category as string] || String(category));
 
   return (
     <DropdownMenu.Root>
@@ -55,13 +63,13 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
           align="start"
         >
           <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-            {categoryLabels[category]} 模型
+            {label} 模型
           </div>
           
           {filteredConfigs.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-gray-500">
               <Bot className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p>暂无{categoryLabels[category]}模型</p>
+              <p>暂无可用模型</p>
               <p className="text-xs mt-1">请在模型管理中添加</p>
             </div>
           ) : (
@@ -88,6 +96,20 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
                             使用中
                           </span>
                         )}
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded",
+                          config.category === 'multimodal'
+                            ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                            : config.category === 'vision'
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                              : config.category === 'text-to-image'
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : config.category === 'image-to-image'
+                                  ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        )}>
+                          {config.category === 'multimodal' ? '图文多模态' : config.category === 'vision' ? '视觉' : config.category === 'text-to-image' ? '文生图' : config.category === 'image-to-image' ? '图生图' : '文本'}
+                        </span>
                       </div>
                     </div>
                     {selectedConfig?.id === config.id && (

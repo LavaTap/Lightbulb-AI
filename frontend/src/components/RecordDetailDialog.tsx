@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Image, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useState } from 'react';
 import { formatTokens, base64ToDataUrl } from '@/lib/utils';
 import type { GenerationRecord } from '@/types';
 
@@ -31,6 +32,10 @@ export function RecordDetailDialog({
   onOpenChange,
   onDownload,
 }: RecordDetailDialogProps) {
+  // 原图查看状态
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   if (!record) return null;
 
   const handleDownload = (base64: string, filename: string) => {
@@ -62,9 +67,27 @@ export function RecordDetailDialog({
     ? record.generatedImages
     : record.generatedImages?.split(',') || [];
 
+  // 处理原图
+  const generatedImagesOriginal = Array.isArray(record.generatedImagesOriginal)
+    ? record.generatedImagesOriginal
+    : record.generatedImagesOriginal?.split(',') || [];
+
   const uploadImages = Array.isArray(record.uploadImages)
     ? record.uploadImages.join(',')
     : record.uploadImages;
+
+  // 处理上传原图
+  const uploadImagesOriginal = Array.isArray(record.uploadImagesOriginal)
+    ? record.uploadImagesOriginal.join(',')
+    : record.uploadImagesOriginal;
+
+  // 当前显示的图片（根据 showOriginal 状态切换）
+  const currentGeneratedImages = showOriginal && generatedImagesOriginal.length > 0
+    ? generatedImagesOriginal
+    : generatedImages;
+
+  // 是否有原图可用
+  const hasOriginal = generatedImagesOriginal.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,38 +100,74 @@ export function RecordDetailDialog({
 
         <div className="overflow-y-auto max-h-[calc(85vh-100px)] pr-1 space-y-4">
           {/* Generated Images */}
-          {generatedImages.length > 0 && (
+          {currentGeneratedImages.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">
-                  {record.featureType === 'threeview' ? '生成图片（三视图）' : '生成图片'}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (generatedImages.length === 1) {
-                      handleDownload(generatedImages[0], 'generated.png');
-                    } else {
-                      generatedImages.forEach((img, i) => {
-                        handleDownload(img, `generated-${i + 1}.png`);
-                      });
-                    }
-                  }}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  下载
-                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {record.featureType === 'threeview' ? '生成图片（三视图）' : '生成图片'}
+                  </span>
+                  {hasOriginal && (
+                    <Button
+                      variant={showOriginal ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowOriginal(!showOriginal)}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <ZoomIn className="w-3 h-3 mr-1" />
+                      {showOriginal ? '高清原图' : '查看原图'}
+                    </Button>
+                  )}
+                  {!hasOriginal && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(缩略图)</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {showOriginal && hasOriginal && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (currentGeneratedImages.length === 1) {
+                          handleDownload(currentGeneratedImages[0], 'generated-original.png');
+                        } else {
+                          currentGeneratedImages.forEach((img, i) => {
+                            handleDownload(img, `generated-original-${i + 1}.png`);
+                          });
+                        }
+                      }}
+                    >
+                      <Image className="w-4 h-4 mr-1" />
+                      下载原图
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (generatedImages.length === 1) {
+                        handleDownload(generatedImages[0], 'generated.png');
+                      } else {
+                        generatedImages.forEach((img, i) => {
+                          handleDownload(img, `generated-${i + 1}.png`);
+                        });
+                      }
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    {showOriginal && hasOriginal ? '下载缩略图' : '下载'}
+                  </Button>
+                </div>
               </div>
-              <div className={generatedImages.length > 1 ? 'grid grid-cols-3 gap-2' : ''}>
-                {(generatedImages as string[]).map((img: string, i: number) => (
+              <div className={currentGeneratedImages.length > 1 ? 'grid grid-cols-3 gap-2' : ''}>
+                {(currentGeneratedImages as string[]).map((img: string, i: number) => (
                   <div key={i} className="relative">
                     <img
                       src={base64ToDataUrl(img)}
                       alt={`Generated ${i + 1}`}
                       className="w-full rounded-lg"
                     />
-                    {generatedImages.length > 1 && (
+                    {currentGeneratedImages.length > 1 && (
                       <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
                         {VIEW_LABELS[i] || `图片${i + 1}`}
                       </span>
@@ -122,7 +181,21 @@ export function RecordDetailDialog({
           {/* Upload Image */}
           {uploadImages && (
             <div>
-              <span className="text-sm font-medium block mb-2">参考图片</span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">参考图片</span>
+                {uploadImagesOriginal && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      handleDownload(uploadImagesOriginal, 'upload-original.png');
+                    }}
+                  >
+                    <Image className="w-4 h-4 mr-1" />
+                    下载原图
+                  </Button>
+                )}
+              </div>
               <img
                 src={base64ToDataUrl(uploadImages)}
                 alt="Upload"

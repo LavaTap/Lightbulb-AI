@@ -57,7 +57,7 @@ export function CharacterGenPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>提示词</CardTitle>
           <ModelDropdown
-            category="text-to-image"
+            category={['text-to-image', 'multimodal']}
             selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />
