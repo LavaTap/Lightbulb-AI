@@ -126,11 +126,12 @@ const PROVIDERS: ProviderInfo[] = [
 
 // 类型选项
 const CATEGORY_OPTIONS = [
-  { value: 'vision', label: '多模态 (Vision)' },
-  { value: 'text-to-image', label: '文生图 (Text to Image)' },
-  { value: 'image-to-image', label: '图生图 (Image to Image)' },
-  { value: 'multimodal', label: '图文多模态 (Multimodal)' },
-  { value: 'text', label: '纯文本 (Text Only)' },
+  { value: 'vision', label: '视觉分析 (Vision)', color: 'purple' },
+  { value: 'text-to-image', label: '文生图 (Text to Image)', color: 'green' },
+  { value: 'image-to-image', label: '图生图 (Image to Image)', color: 'orange' },
+  { value: 'image-understanding', label: '图文理解 (Image Understanding)', color: 'teal' },
+  { value: 'multimodal', label: '图文多模态 (Multimodal)', color: 'indigo' },
+  { value: 'text', label: '纯文本 (Text Only)', color: 'blue' },
 ];
 
 interface ModelManagerContentProps {
@@ -145,7 +146,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
   const [model, setModel] = useState('');
   const [useProxy, setUseProxy] = useState(false);
   const [proxyEndpoint, setProxyEndpoint] = useState('');
-  const [category, setCategory] = useState<ModelCategory>('vision');
+  const [category, setCategory] = useState<ModelCategory[]>(['vision']);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -158,7 +159,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editModel, setEditModel] = useState('');
-  const [editCategory, setEditCategory] = useState<ModelCategory>('vision');
+  const [editCategory, setEditCategory] = useState<ModelCategory[]>(['vision']);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const {
@@ -197,7 +198,8 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
     const provider = PROVIDERS.find(p => p.id === selectedProvider);
     const modelInfo = provider?.models.find(m => m.id === modelId);
     if (modelInfo) {
-      setCategory(modelInfo.category);
+      // 统一为数组格式
+      setCategory(Array.isArray(modelInfo.category) ? modelInfo.category : [modelInfo.category]);
     } else if (selectedProvider === 'custom') {
       // 自定义模式下保持用户选择的类型不变
     }
@@ -228,7 +230,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
   const executeSave = async () => {
     setSaving(true);
     try {
-      let detectedCategory = category;
+      let detectedCategories = [...category];
       let detectedCapabilities: string[] = [];
 
       if (apiKey && selectedProvider !== 'custom') {
@@ -244,9 +246,13 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
           });
 
           if (detectResult.success && detectResult.data) {
-            detectedCategory = detectResult.data.category;
+            // 将检测到的类别合并到已有选择中
+            const detectedCat = detectResult.data.category;
+            if (!detectedCategories.includes(detectedCat)) {
+              detectedCategories.push(detectedCat);
+            }
             detectedCapabilities = detectResult.data.capabilities;
-            setCategory(detectedCategory);
+            setCategory(detectedCategories);
           }
         } catch (e) {
           console.error('Failed to detect:', e);
@@ -262,7 +268,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
         endpoint,
         useProxy,
         proxyEndpoint,
-        detectedCategory,
+        detectedCategories.length > 1 ? detectedCategories : detectedCategories[0],
         detectedCapabilities,
         false
       );
@@ -332,7 +338,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
     setEditingId(config.id);
     setEditName(config.name);
     setEditModel(config.model);
-    setEditCategory(config.category as ModelCategory);
+    setEditCategory(Array.isArray(config.category) ? config.category : [config.category]);
   };
 
   // 取消编辑
@@ -340,7 +346,7 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
     setEditingId(null);
     setEditName('');
     setEditModel('');
-    setEditCategory('vision');
+    setEditCategory(['vision']);
   };
 
   // 保存编辑
@@ -417,21 +423,40 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
                           />
                         </div>
 
-                        {/* 编辑类型 */}
+                        {/* 编辑类型 - 多选 Checkbox */}
                         <div className="space-y-1">
-                          <Label className="text-xs text-gray-500">类型</Label>
-                          <Select value={editCategory} onValueChange={(v) => setEditCategory(v as ModelCategory)}>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CATEGORY_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-xs text-gray-500">
+                            类型（可多选，最多 3 种）
+                          </Label>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {CATEGORY_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                  if (editCategory.includes(opt.value as ModelCategory)) {
+                                    setEditCategory(editCategory.filter(c => c !== opt.value));
+                                  } else if (editCategory.length < 3) {
+                                    setEditCategory([...editCategory, opt.value as ModelCategory]);
+                                  }
+                                }}
+                                className={cn(
+                                  "px-2 py-0.5 rounded-full text-xs border transition-colors",
+                                  editCategory.includes(opt.value as ModelCategory)
+                                    ? `bg-${opt.color}-100 text-${opt.color}-700 dark:bg-${opt.color}-900/30 dark:text-${opt.color}-400 border-${opt.color}-300`
+                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+                                )}
+                              >
+                                {editCategory.includes(opt.value as ModelCategory) && (
+                                  <Check className="w-3 h-3 inline mr-0.5" />
+                                )}
+                                {opt.label.split(' ')[0]}
+                              </button>
+                            ))}
+                          </div>
+                          {editCategory.length >= 3 && (
+                            <p className="text-xs text-amber-500">已达上限 3 种类型</p>
+                          )}
                         </div>
 
                         {/* 操作按钮 */}
@@ -492,20 +517,33 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-600 dark:text-gray-400">
                           <span>服务商: {PROVIDERS.find(p => p.id === config.provider)?.name}</span>
                           <span>模型: {config.model}</span>
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded",
-                            config.category === 'multimodal'
-                              ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                              : config.category === 'vision'
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                : config.category === 'text-to-image'
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : config.category === 'image-to-image'
-                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                          )}>
-                            类型: {config.category === 'multimodal' ? '图文多模态' : config.category === 'vision' ? '多模态' : config.category === 'text-to-image' ? '文生图' : config.category === 'image-to-image' ? '图生图' : '纯文本'}
-                          </span>
+                        </div>
+                        {/* 类型标签 - 支持多选显示 */}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(Array.isArray(config.category) ? config.category : [config.category]).map((cat) => {
+                            const opt = CATEGORY_OPTIONS.find(o => o.value === cat);
+                            return (
+                              <span
+                                key={cat}
+                                className={cn(
+                                  "px-1.5 py-0.5 rounded text-xs",
+                                  cat === 'multimodal'
+                                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                    : cat === 'vision'
+                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                      : cat === 'text-to-image'
+                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                        : cat === 'image-to-image'
+                                          ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                          : cat === 'image-understanding'
+                                            ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
+                                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                )}
+                              >
+                                {opt ? opt.label.split(' ')[0] : cat}
+                              </span>
+                            );
+                          })}
                         </div>
                         {/* 测试结果显示 */}
                         {configTestMap[config.id]?.result && (
@@ -571,25 +609,43 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
             )}
           </div>
 
-          {/* 自定义模式：手动选择类型 */}
+          {/* 自定义模式：手动选择类型（多选） */}
           {selectedProvider === 'custom' && (
             <div className="space-y-2">
-              <Label htmlFor="category">选择类型（自定义模式必填）</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as ModelCategory)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择模型类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                提示：如果不确定模型能力，可以先测试连接后系统会自动识别
-              </p>
+              <Label>选择类型（可多选，最多 3 种）</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (category.includes(opt.value as ModelCategory)) {
+                        setCategory(category.filter(c => c !== opt.value));
+                      } else if (category.length < 3) {
+                        setCategory([...category, opt.value as ModelCategory]);
+                      }
+                    }}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-xs border transition-all",
+                      category.includes(opt.value as ModelCategory)
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 border-primary-300 shadow-sm"
+                        : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+                    )}
+                  >
+                    {category.includes(opt.value as ModelCategory) && (
+                      <Check className="w-3 h-3 inline mr-0.5" />
+                    )}
+                    {opt.label.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+              {category.length >= 3 ? (
+                <p className="text-xs text-amber-500">已达上限 3 种类型</p>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  提示：如果不确定模型能力，可以先测试连接后系统会自动识别
+                </p>
+              )}
             </div>
           )}
 

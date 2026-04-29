@@ -32,7 +32,7 @@ export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 export type FeatureType = 'inspiration' | 'character' | 'threeview' | 'poster' | 'cg';
 
 // Model capability categories
-export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'multimodal' | 'text';
+export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'image-understanding' | 'multimodal' | 'text';
 
 // Model configuration for storage
 export interface ModelConfig {
@@ -44,7 +44,7 @@ export interface ModelConfig {
   endpoint?: string;
   useProxy: boolean;
   proxyEndpoint?: string;
-  category: ModelCategory;
+  category: ModelCategory | ModelCategory[];  // 支持多类别
   capabilities: string[];
   isActive: boolean;
   createdAt: string;
@@ -58,7 +58,7 @@ export interface ProviderInfo {
   models: {
     id: string;
     name: string;
-    category: ModelCategory;
+    category: ModelCategory | ModelCategory[];  // 支持单类别或多类别
     capabilities: string[];
     description?: string;
   }[];

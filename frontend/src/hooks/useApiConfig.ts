@@ -114,9 +114,14 @@ export function useApiConfig() {
   }, [loadModelConfigs]);
 
   // Get configs filtered by category (supports single value or array of categories)
+  // 支持模型配置的 category 为数组（多选）或字符串（单选）的情况
   const getConfigsByCategory = useCallback((category: ModelCategory | ModelCategory[]) => {
-    const categories = Array.isArray(category) ? category : [category];
-    return modelConfigs.filter(c => categories.includes(c.category));
+    const targetCategories = Array.isArray(category) ? category : [category];
+    return modelConfigs.filter(c => {
+      const configCategories = Array.isArray(c.category) ? c.category : [c.category];
+      // 只要模型的任一类别与目标类别有交集就匹配
+      return configCategories.some(cat => targetCategories.includes(cat));
+    });
   }, [modelConfigs]);
 
   // Set selected category

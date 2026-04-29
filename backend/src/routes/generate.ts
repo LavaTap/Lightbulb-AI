@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { analyzeSchema, generateImageSchema, generatePosterSchema } from '../middleware/validateRequest.js';
 import { analyzeImage } from '../services/visionService.js';
 import { generateImage } from '../services/imageGenService.js';
@@ -7,8 +7,36 @@ import { ZodError } from 'zod';
 
 const router = Router();
 
+/**
+ * 从错误对象中提取可读的错误信息
+ * 优先级: response.body > response.data.error.message > error.message > fallback
+ */
+function extractErrorMessage(error: any): string {
+  // Axios 风格错误 (response.data)
+  if (error.response?.data) {
+    const data = error.response.data;
+    if (typeof data === 'string') return data;
+    if (data.error) {
+      if (typeof data.error === 'string') return data.error;
+      if (data.error?.message) return data.error.message;
+      if (Array.isArray(data.error)) return data.error.map((e: any) => e.message || JSON.stringify(e)).join('; ');
+    }
+    if (data.message) return data.message;
+  }
+  
+  // OpenAI SDK 风格错误
+  if (error.message) return error.message;
+  
+  // HTTP status + statusText
+  if (error.response?.status && error.response?.statusText) {
+    return `HTTP ${error.response.status}: ${error.response.statusText}`;
+  }
+  
+  return '未知错误，请查看后端日志';
+}
+
 // Vision analyze endpoint
-router.post('/vision/analyze', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/vision/analyze', async (req: Request, res: Response) => {
   try {
     const { imageBase64, config, category } = analyzeSchema.parse(req.body);
 
@@ -34,24 +62,30 @@ router.post('/vision/analyze', async (req: Request, res: Response, next: NextFun
     console.error('[Vision Analyze ERROR]', error.message);
     console.error('[Stack]', error.stack);
     
+    // 提取详细错误信息
+    const errorMessage = extractErrorMessage(error);
+    
     if (error.code === 'ECONNREFUSED') {
-      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
     } else if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-      res.status(504).json({ success: false, error: 'API 请求超时，请检查网络连接' });
+      res.status(504).json({ success: false, error: 'API 请求超时，请检查网络连接', detail: errorMessage });
     } else if (error.status === 401 || error.message?.includes('401')) {
-      res.status(401).json({ success: false, error: 'API Key 无效或已过期' });
+      res.status(401).json({ success: false, error: 'API Key 无效或已过期', detail: errorMessage });
     } else if (error.status === 429) {
-      res.status(429).json({ success: false, error: 'API 请求过于频繁，请稍后重试' });
+      res.status(429).json({ success: false, error: 'API 请求过于频繁，请稍后重试', detail: errorMessage });
     } else if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
+    } else if (error.status || error.response?.status) {
+      const statusCode = error.status || error.response?.status;
+      res.status(statusCode).json({ success: false, error: errorMessage });
     } else {
-      next(error);
+      res.status(500).json({ success: false, error: errorMessage });
     }
   }
 });
 
 // Image generate endpoint
-router.post('/image/generate', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/image/generate', async (req: Request, res: Response) => {
   try {
     const { prompt, config, size, referenceImage } = generateImageSchema.parse(req.body);
     
@@ -74,23 +108,30 @@ router.post('/image/generate', async (req: Request, res: Response, next: NextFun
     });
   } catch (error: any) {
     console.error('[Image Generate ERROR]', error.message);
+    console.error('[Stack]', error.stack);
+    
+    // 提取详细错误信息
+    const errorMessage = extractErrorMessage(error);
     
     if (error.code === 'ECONNREFUSED') {
-      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
     } else if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-      res.status(504).json({ success: false, error: 'API 请求超时' });
+      res.status(504).json({ success: false, error: 'API 请求超时', detail: errorMessage });
     } else if (error.status === 401) {
-      res.status(401).json({ success: false, error: 'API Key 无效' });
+      res.status(401).json({ success: false, error: 'API Key 无效', detail: errorMessage });
     } else if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
+    } else if (error.status || error.response?.status) {
+      const statusCode = error.status || error.response?.status;
+      res.status(statusCode).json({ success: false, error: errorMessage });
     } else {
-      next(error);
+      res.status(500).json({ success: false, error: errorMessage });
     }
   }
 });
 
 // Poster generate endpoint
-router.post('/poster/generate', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/poster/generate', async (req: Request, res: Response) => {
   try {
     const { images, prompt, config } = generatePosterSchema.parse(req.body);
     
@@ -105,13 +146,20 @@ router.post('/poster/generate', async (req: Request, res: Response, next: NextFu
     });
   } catch (error: any) {
     console.error('[Poster Generate ERROR]', error.message);
+    console.error('[Stack]', error.stack);
+    
+    // 提取详细错误信息
+    const errorMessage = extractErrorMessage(error);
     
     if (error.code === 'ECONNREFUSED') {
-      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
     } else if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
+    } else if (error.status || error.response?.status) {
+      const statusCode = error.status || error.response?.status;
+      res.status(statusCode).json({ success: false, error: errorMessage });
     } else {
-      next(error);
+      res.status(500).json({ success: false, error: errorMessage });
     }
   }
 });

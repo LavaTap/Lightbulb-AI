@@ -31,67 +31,93 @@ const PROVIDERS: ProviderInfo[] = [
     id: 'openai',
     name: 'OpenAI',
     models: [
-      { id: 'gpt-4o', name: 'GPT-4o', category: 'vision', capabilities: ['vision', 'text'], description: '最新多模态模型，支持图片分析' },
+      { id: 'gpt-4o', name: 'GPT-4o', category: 'vision', capabilities: ['vision', 'text'], description: '最新多模态模型' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', category: 'vision', capabilities: ['vision', 'text'], description: '轻量多模态模型' },
       { id: 'gpt-4.1', name: 'GPT-4.1', category: 'vision', capabilities: ['vision', 'text'], description: '最新GPT-4系列' },
       { id: 'dall-e-3', name: 'DALL-E 3', category: 'text-to-image', capabilities: ['image-generation'], description: 'OpenAI图像生成' },
-      { id: 'gpt-image-1', name: 'GPT Image 1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '新一代图像生成/编辑模型' },
+      { id: 'gpt-image-1', name: 'GPT Image 1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '图像生成/编辑' },
+      // 纯文本模型
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', category: 'text', capabilities: ['text'], description: 'GPT-4 纯文本版' },
+      { id: 'o1', name: 'o1', category: 'text', capabilities: ['text', 'reasoning'], description: '推理增强模型' },
+      { id: 'o3-mini', name: 'o3 Mini', category: 'text', capabilities: ['text', 'reasoning'], description: '高效推理模型' },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', category: 'text', capabilities: ['text'], description: '经典文本模型' },
     ],
   },
   {
     id: 'google',
     name: 'Google Gemini',
     models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '高速多模态模型' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', category: 'vision', capabilities: ['vision', 'text'], description: '高性能多模态模型' },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '快速多模态推理' },
-      { id: 'imagen-3', name: 'Imagen 3', category: 'text-to-image', capabilities: ['image-generation'], description: 'Google高质量图像生成' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '高速多模态' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', category: 'vision', capabilities: ['vision', 'text'], description: '高性能多模态' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', category: 'vision', capabilities: ['vision', 'text'], description: '快速推理' },
+      { id: 'imagen-3', name: 'Imagen 3', category: 'text-to-image', capabilities: ['image-generation'], description: 'Google图像生成' },
       { id: 'imagen-4', name: 'Imagen 4', category: 'text-to-image', capabilities: ['image-generation'], description: '最新图像生成' },
+      // 纯文本模型
+      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', category: 'text', capabilities: ['text'], description: '超快纯文本' },
+      { id: 'gemini-2.5-pro-lite', name: 'Gemini 2.5 Pro Lite', category: 'text', capabilities: ['text'], description: '高效纯文本' },
     ],
   },
   {
     id: 'deepseek',
     name: 'DeepSeek',
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'text-to-image', capabilities: ['text'], description: '高性能文本模型' },
-      { id: 'deepseek-r1', name: 'DeepSeek R1', category: 'text-to-image', capabilities: ['text'], description: '推理增强模型' },
-      { id: 'janus-pro', name: 'Janus-Pro', category: 'vision', capabilities: ['vision', 'text', 'image-generation'], description: 'DeepSeek原生多模态' },
+      { id: 'deepseek-chat', name: 'DeepSeek V3', category: 'text', capabilities: ['text'], description: '通用文本模型' },
+      { id: 'deepseek-r1', name: 'DeepSeek R1', category: 'text', capabilities: ['text', 'reasoning'], description: '推理增强模型' },
+      { id: 'janus-pro', name: 'Janus-Pro', category: 'vision', capabilities: ['vision', 'text', 'image-generation'], description: '原生多模态' },
+      // 新增纯文本
+      { id: 'deepseek-coder', name: 'DeepSeek Coder', category: 'text', capabilities: ['text', 'code'], description: '代码专用模型' },
     ],
   },
   {
     id: 'aliyun',
     name: '阿里云 通义千问',
     models: [
-      { id: 'qwen-vl-max', name: 'Qwen-VL-Max', category: 'vision', capabilities: ['vision', 'text'], description: '通义千问视觉大模型' },
-      { id: 'qwen-vl-plus', name: 'Qwen-VL-Plus', category: 'vision', capabilities: ['vision', 'text'], description: '轻量视觉模型' },
-      { id: 'wanx-v1', name: 'Wanx v1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '通义万相图像生成' },
+      { id: 'qwen-vl-max', name: 'Qwen-VL-Max', category: 'vision', capabilities: ['vision', 'text'], description: '视觉大模型' },
+      { id: 'qwen-vl-plus', name: 'Qwen-VL-Plus', category: 'vision', capabilities: ['vision', 'text'], description: '轻量视觉' },
+      { id: 'wanx-v1', name: 'Wanx v1', category: 'image-to-image', capabilities: ['image-generation', 'image-editing'], description: '通义万相' },
       { id: 'wanx2.1', name: 'Wanx 2.1', category: 'text-to-image', capabilities: ['image-generation'], description: '新一代图像生成' },
+      // 纯文本模型
+      { id: 'qwen-max', name: 'Qwen Max', category: 'text', capabilities: ['text'], description: '通义千问旗舰' },
+      { id: 'qwen-plus', name: 'Qwen Plus', category: 'text', capabilities: ['text'], description: '通义千问增强' },
+      { id: 'qwen-turbo', name: 'Qwen Turbo', category: 'text', capabilities: ['text'], description: '通义千问极速' },
+      { id: 'qwen-coder-plus', name: 'Qwen Coder Plus', category: 'text', capabilities: ['text', 'code'], description: '代码专用' },
     ],
   },
   {
     id: 'bytedance',
     name: '字节跳动 豆包',
     models: [
-      { id: 'doubao-pro-32k', name: '豆包 Pro-32K', category: 'text-to-image', capabilities: ['text'], description: '长文本处理' },
-      { id: 'doubao-vision', name: '豆包 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '多模态理解模型' },
-      { id: 'seedance', name: 'Seedance', category: 'text-to-image', capabilities: ['image-generation'], description: '字节视频/图像生成' },
+      { id: 'doubao-pro-32k', name: '豆包 Pro-32K', category: 'text', capabilities: ['text'], description: '长文本处理' },
+      { id: 'doubao-vision', name: '豆包 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '多模态理解' },
+      { id: 'seedance', name: 'Seedance', category: 'text-to-image', capabilities: ['image-generation'], description: '视频/图像生成' },
+      // 纯文本模型
+      { id: 'doubao-lite-32k', name: '豆包 Lite-32K', category: 'text', capabilities: ['text'], description: '轻量长文本' },
+      { id: 'doubao-pro-128k', name: '豆包 Pro-128K', category: 'text', capabilities: ['text'], description: '超长文本处理' },
     ],
   },
   {
     id: 'baidu',
     name: '百度 文心一言',
     models: [
-      { id: 'ernie-4.0', name: '文心 4.0', category: 'text-to-image', capabilities: ['text'], description: '最新文心大模型' },
+      { id: 'ernie-4.0', name: '文心 4.0', category: 'text', capabilities: ['text'], description: '文心大模型' },
       { id: 'ernie-4-vision', name: '文心 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '文心多模态' },
-      { id: 'ernie-vilg', name: '文心一格', category: 'text-to-image', capabilities: ['image-generation'], description: '百度AI绘画' },
+      { id: 'ernie-vilg', name: '文心一格', category: 'text-to-image', capabilities: ['image-generation'], description: 'AI绘画' },
+      // 纯文本模型
+      { id: 'ernie-4.0-turbo', name: '文心 4.0 Turbo', category: 'text', capabilities: ['text'], description: '高速文心' },
+      { id: 'ernie-speed', name: '文心 Speed', category: 'text', capabilities: ['text'], description: '极速文心' },
+      { id: 'ernie-lite', name: '文心 Lite', category: 'text', capabilities: ['text'], description: '轻量文心' },
     ],
   },
   {
     id: 'xfyun',
     name: '讯飞星火',
     models: [
-      { id: 'xunfeispark-4.0-ultra', name: '星火 4.0 Ultra', category: 'text-to-image', capabilities: ['text'], description: '讯飞最新旗舰' },
+      { id: 'xunfeispark-4.0-ultra', name: '星火 4.0 Ultra', category: 'text', capabilities: ['text'], description: '讯飞旗舰' },
       { id: 'spark4-vision', name: '星火 4 Vision', category: 'vision', capabilities: ['vision', 'text'], description: '讯飞多模态' },
+      // 纯文本模型
+      { id: 'spark-4.0-pro', name: '星火 4.0 Pro', category: 'text', capabilities: ['text'], description: '讯飞专业版' },
+      { id: 'spark-4.0-lite', name: '星火 4.0 Lite', category: 'text', capabilities: ['text'], description: '讯飞轻量版' },
+      { id: 'spark-3.5', name: '星火 3.5', category: 'text', capabilities: ['text'], description: '讯飞经典版' },
     ],
   },
   {
@@ -370,7 +396,31 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
                       <div className="flex gap-4">
                         <span>服务商: {PROVIDERS.find(p => p.id === config.provider)?.name || config.provider}</span>
                         <span>模型: {config.model}</span>
-                        <span>类型: {config.category === 'vision' ? '多模态' : config.category === 'text-to-image' ? '文生图' : '图生图'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(Array.isArray(config.category) ? config.category : [config.category]).map((cat) => {
+                          const labels: Record<string, string> = {
+                            vision: '多模态',
+                            'text-to-image': '文生图',
+                            'image-to-image': '图生图',
+                            multimodal: '图文多模态',
+                            text: '纯文本',
+                            'image-understanding': '图文理解',
+                          };
+                          return (
+                            <span key={cat} className={cn(
+                              "px-1.5 py-0.5 rounded text-xs",
+                              cat === 'vision' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                              : cat === 'text-to-image' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : cat === 'image-to-image' ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                              : cat === 'multimodal' ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                              : cat === 'text' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
+                            )}>
+                              {labels[cat] || cat}
+                            </span>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>

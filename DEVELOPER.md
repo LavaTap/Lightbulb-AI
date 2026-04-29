@@ -1,6 +1,6 @@
 # Lightbulb AI 开发者手册
 
-> **版本**: v2.0 | **更新日期**: 2026-04-28  
+> **版本**: v2.1 | **更新日期**: 2026-04-29  
 > **由**: LightGuide 自动生成 | **基于项目源码全量扫描**
 
 ---
@@ -424,7 +424,7 @@ Axios 实例配置：
 
 | 组件 | 职责 |
 |------|------|
-| `ModelDropdown` | 页面内的模型选择下拉框，按 category（vision/text-to-image/image-to-image）过滤可用模型 |
+| `ModelDropdown` | 页面内的模型选择下拉框，按 category（vision/text-to-image/image-to-image/image-understanding/multimodal/text）过滤可用模型 |
 | `ModelSelector` | 完整的模型配置弹窗（旧版，保留兼容） |
 | `ModelManagerContent` | 新版模型管理面板（支持编辑名称/模型/类别、含 text 类别、8 大服务商完整模型列表） |
 | `ImageUploadZone` | 拖拽/点击上传，自动压缩（默认 1024px / quality 0.85） |
@@ -478,7 +478,9 @@ Axios 实例配置：
 | `vision` | 多模态（图片理解 + 文本） | 灵感提示 |
 | `text-to-image` | 文生图 | 角色生图 |
 | `image-to-image` | 图生图 | 三视图、海报生成 |
-| `text` | 纯文本 | （扩展预留） |
+| `image-understanding` | 图文理解 | 图片语义理解 |
+| `multimodal` | 图文多模态 | 图文混合处理 |
+| `text` | 纯文本 | 纯文本对话、代码生成 |
 
 ### 6.4 调用流程
 
@@ -898,6 +900,10 @@ cd ../frontend && npm install
 | `gpt-4.1` | vision | 最新 GPT-4 系列 |
 | `dall-e-3` | text-to-image | OpenAI 图像生成 |
 | `gpt-image-1` | image-to-image | 图像生成/编辑 |
+| `gpt-4-turbo` | text | GPT-4 纯文本版 |
+| `o1` | text | 推理增强模型 |
+| `o3-mini` | text | 高效推理模型 |
+| `gpt-3.5-turbo` | text | 经典文本模型 |
 
 ### Google Gemini
 
@@ -908,6 +914,8 @@ cd ../frontend && npm install
 | `gemini-2.0-flash` | vision | 快速推理 |
 | `imagen-3` | text-to-image | Google 图像生成 |
 | `imagen-4` | text-to-image | 最新图像生成 |
+| `gemini-2.5-flash-lite` | text | 超快纯文本 |
+| `gemini-2.5-pro-lite` | text | 高效纯文本 |
 
 ### 阿里云
 
@@ -917,6 +925,10 @@ cd ../frontend && npm install
 | `qwen-vl-plus` | vision | 轻量视觉模型（**视觉分析固定使用此模型**） |
 | `wanx-v1` | image-to-image | 通义万相图生图 |
 | `wanx2.1` | text-to-image | 新一代图像生成 |
+| `qwen-max` | text | 通义千问旗舰 |
+| `qwen-plus` | text | 通义千问增强 |
+| `qwen-turbo` | text | 通义千问极速 |
+| `qwen-coder-plus` | text | 代码专用 |
 
 ### 字节跳动
 
@@ -925,6 +937,8 @@ cd ../frontend && npm install
 | `doubao-pro-32k` | text | 长文本处理 |
 | `doubao-vision` | vision | 多模态理解 |
 | `seedance` | text-to-image | 视频/图像生成 |
+| `doubao-lite-32k` | text | 轻量长文本 |
+| `doubao-pro-128k` | text | 超长文本处理 |
 
 ### 百度
 
@@ -933,6 +947,9 @@ cd ../frontend && npm install
 | `ernie-4.0` | text | 文心大模型 |
 | `ernie-4-vision` | vision | 文心多模态 |
 | `ernie-vilg` | text-to-image | 文心一格 AI 画 |
+| `ernie-4.0-turbo` | text | 高速文心 |
+| `ernie-speed` | text | 极速文心 |
+| `ernie-lite` | text | 轻量文心 |
 
 ### 讯飞星火
 
@@ -940,6 +957,9 @@ cd ../frontend && npm install
 |---------|------|------|
 | `xunfeispark-4.0-ultra` | text | 讯飞旗舰 |
 | `spark4-vision` | vision | 讯飞多模态 |
+| `spark-4.0-pro` | text | 讯飞专业版 |
+| `spark-4.0-lite` | text | 讯飞轻量版 |
+| `spark-3.5` | text | 讯飞经典版 |
 
 ### DeepSeek
 
@@ -948,9 +968,18 @@ cd ../frontend && npm install
 | `deepseek-chat` | text | 通用文本 V3 |
 | `deepseek-r1` | text | 推理增强 |
 | `janus-pro` | vision | 原生多模态 |
+| `deepseek-coder` | text | 代码专用模型 |
 
 ---
 
+> **Changelog (v2.1 | 2026-04-29)**:
+> - 同步：`ModelSelector.tsx` 与 `ModelManagerContent.tsx` 的 PROVIDERS 定义完全对齐（补全 OpenAI/Google/DeepSeek/阿里云/字节跳动/百度/讯飞各服务商纯文本模型）
+> - 修复：`ModelSelector.tsx` 已保存配置的 category 显示逻辑，支持全部 6 种类型和数组格式的多标签渲染
+> - 修复：部分服务商模型 category 标记错误（DeepSeek/deepseek-chat/r1、字节豆包 Pro-32K、百度文心 4.0、讯飞星火 4.0 Ultra 均从 `text-to-image` 修正为 `text`）
+> - 新增：`ModelDropdown.tsx` 增加 `image-understanding` 和 `multimodal` 类别的标签和颜色映射支持
+> - 新增：§6.3 Category 表格补充 `image-understanding`（图文理解）和 `multimodal`（图文多模态）两种类别
+> - 新增：§B 附录模型参考表补充各服务商纯文本模型 ID
+>
 > **Changelog (v2.0 | 2026-04-28)**:
 > - 基于 v1 手册全量重写，对齐最新代码
 > - 新增：CG 生成页（CgGenPage）、FeatureType 增加 `cg` 类型

@@ -13,6 +13,29 @@ import { ZodError, z } from 'zod';
 
 const router = Router();
 
+/**
+ * 规范化 category 字段：数组转 JSON 字符串存储，单值直接存储
+ */
+function serializeCategory(category: any): string {
+  if (Array.isArray(category)) {
+    return category.join(',');
+  }
+  return String(category || 'vision');
+}
+
+/**
+ * 反序列化 category：逗号分隔的字符串转数组，单值保持不变
+ */
+function deserializeCategory(category: any): string | string[] {
+  if (!category) return 'vision';
+  const str = String(category);
+  // 如果包含逗号，解析为数组
+  if (str.includes(',')) {
+    return str.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return str;
+}
+
 const modelConfigSchema = z.object({
   name: z.string().min(1),
   provider: z.string().min(1),
@@ -21,7 +44,7 @@ const modelConfigSchema = z.object({
   endpoint: z.string().optional(),
   useProxy: z.boolean().optional(),
   proxyEndpoint: z.string().optional(),
-  category: z.string().optional().default('vision'),
+  category: z.union([z.string(), z.array(z.string())]).optional().default('vision'),
   capabilities: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
 });
@@ -50,7 +73,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         endpoint: c.endpoint,
         useProxy: c.use_proxy === 1,
         proxyEndpoint: c.proxy_endpoint,
-        category: c.category,
+        category: deserializeCategory(c.category),
         capabilities: c.capabilities ? JSON.parse(c.capabilities) : [],
         isActive: c.is_active === 1,
         createdAt: c.created_at,
@@ -80,7 +103,7 @@ router.get('/active', async (req: Request, res: Response, next: NextFunction) =>
         endpoint: config.endpoint,
         useProxy: config.use_proxy === 1,
         proxyEndpoint: config.proxy_endpoint,
-        category: config.category,
+        category: deserializeCategory(config.category),
         capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
         isActive: true,
         createdAt: config.created_at,
@@ -111,7 +134,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
         endpoint: config.endpoint,
         useProxy: config.use_proxy === 1,
         proxyEndpoint: config.proxy_endpoint,
-        category: config.category,
+        category: deserializeCategory(config.category),
         capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
         isActive: config.is_active === 1,
         createdAt: config.created_at,
@@ -136,7 +159,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       endpoint: data.endpoint || null,
       use_proxy: data.useProxy ? 1 : 0,
       proxy_endpoint: data.proxyEndpoint || null,
-      category: data.category,
+      category: serializeCategory(data.category),
       capabilities: data.capabilities ? JSON.stringify(data.capabilities) : null,
       is_active: data.isActive ? 1 : 0,
     });
@@ -175,7 +198,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       endpoint: data.endpoint,
       use_proxy: data.useProxy !== undefined ? (data.useProxy ? 1 : 0) : undefined,
       proxy_endpoint: data.proxyEndpoint,
-      category: data.category,
+      category: data.category !== undefined ? serializeCategory(data.category) : undefined,
       capabilities: data.capabilities ? JSON.stringify(data.capabilities) : undefined,
       is_active: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined,
     });

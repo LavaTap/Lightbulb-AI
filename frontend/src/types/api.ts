@@ -1,4 +1,4 @@
-import type { APIConfig, VisionAnalysisResult, ModelConfig } from './index';
+import type { APIConfig, VisionAnalysisResult, ModelConfig, ModelCategory } from './index';
 
 export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
@@ -81,7 +81,7 @@ export interface CreateModelConfigRequest {
   endpoint?: string;
   useProxy?: boolean;
   proxyEndpoint?: string;
-  category?: string;
+  category?: ModelCategory | ModelCategory[];
   capabilities?: string[];
   isActive?: boolean;
 }
@@ -105,6 +105,6 @@ export interface DetectCapabilitiesResponse {
   success: boolean;
   data: {
     capabilities: string[];
-    category: 'vision' | 'text-to-image' | 'image-to-image';
+    category: ModelCategory;
   };
 }
