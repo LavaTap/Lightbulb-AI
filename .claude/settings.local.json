@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(npm install *)",
+      "Bash(node -e \"const c = require\\('chromadb'\\); console.log\\(typeof c.Collection, typeof c.ChromaClient\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"require\\('chromadb'\\); console.log\\('chromadb OK'\\)\")",
+      "Bash(git status *)"
     ]
   }
 }

@@ -13,7 +13,7 @@ export interface VisionAnalysisResult {
 
 export interface GenerationRecord {
   id: number;
-  featureType: 'inspiration' | 'character' | 'threeview' | 'poster';
+  featureType: 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster';
   prompt?: string;
   uploadImages: string;
   generatedImages: string;

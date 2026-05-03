@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { createApp } from './app.js';
 import { getDatabase, closeDatabase } from './database.js';
+import { initChroma } from './services/chromaService.js';
 
 dotenv.config();
 
@@ -11,6 +12,13 @@ async function start() {
   
   // Initialize database on startup
   await getDatabase();
+
+  // Initialize ChromaDB (optional - graceful degradation)
+  try {
+    await initChroma();
+  } catch (e) {
+    console.warn('ChromaDB not available, chat memory features disabled');
+  }
   
   const server = app.listen(PORT, () => {
     console.log(`Lightbulb AI Backend running on http://localhost:${PORT}`);

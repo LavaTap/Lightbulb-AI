@@ -144,6 +144,38 @@ function initDatabase(database: SqlJsDatabase): void {
     );
   `);
 
+  // AI 对话相关表
+  database.run(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL DEFAULT '新对话',
+      model_provider TEXT NOT NULL,
+      model_name TEXT NOT NULL,
+      system_prompt TEXT,
+      summary TEXT,
+      summary_updated_at DATETIME,
+      message_count INTEGER DEFAULT 0,
+      is_archived INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('system','user','assistant')),
+      content TEXT NOT NULL,
+      token_usage INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    );
+  `);
+
+  database.run(`CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)`);
+
   // 创建索引以提高搜索性能
   database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_status ON model_instances(status)`);
   database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_config_id ON model_instances(config_id)`);
@@ -226,7 +258,7 @@ export async function getModelConfigById(id: number): Promise<ModelConfigRow | n
   const stmt = database.prepare('SELECT * FROM model_configs WHERE id = ?');
   stmt.bind([id]);
   if (stmt.step()) {
-    const row = stmt.getAsObject() as ModelConfigRow;
+    const row = stmt.getAsObject() as unknown as ModelConfigRow;
     stmt.free();
     return row;
   }
@@ -328,4 +360,152 @@ export async function setAppSetting(key: string, value: string): Promise<void> {
     VALUES (?, ?, CURRENT_TIMESTAMP)
   `, [key, value]);
   saveDatabase();
+}
+
+// Conversation Operations
+export interface ConversationRow {
+  id: number;
+  title: string;
+  model_provider: string;
+  model_name: string;
+  system_prompt: string | null;
+  summary: string | null;
+  summary_updated_at: string | null;
+  message_count: number;
+  is_archived: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessageRow {
+  id: number;
+  conversation_id: number;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  token_usage: number;
+  created_at: string;
+}
+
+export async function getAllConversations(page = 1, pageSize = 20): Promise<{ conversations: ConversationRow[]; total: number }> {
+  const database = await getDatabase();
+  const offset = (page - 1) * pageSize;
+
+  const countResult = database.exec('SELECT COUNT(*) as total FROM conversations');
+  const total = countResult.length > 0 ? (countResult[0].values[0][0] as number) : 0;
+
+  const results = database.exec(
+    'SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ? OFFSET ?',
+    [pageSize, offset]
+  );
+  if (results.length === 0) return { conversations: [], total };
+
+  const columns = results[0].columns;
+  const conversations = results[0].values.map(row => {
+    const obj: any = {};
+    columns.forEach((col, i) => { obj[col] = row[i]; });
+    return obj as ConversationRow;
+  });
+
+  return { conversations, total };
+}
+
+export async function getConversationById(id: number): Promise<ConversationRow | null> {
+  const database = await getDatabase();
+  const stmt = database.prepare('SELECT * FROM conversations WHERE id = ?');
+  stmt.bind([id]);
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as unknown as ConversationRow;
+    stmt.free();
+    return row;
+  }
+  stmt.free();
+  return null;
+}
+
+export async function createConversation(data: {
+  title?: string;
+  model_provider: string;
+  model_name: string;
+  system_prompt?: string;
+}): Promise<number> {
+  const database = await getDatabase();
+  database.run(
+    'INSERT INTO conversations (title, model_provider, model_name, system_prompt) VALUES (?, ?, ?, ?)',
+    [data.title || '新对话', data.model_provider, data.model_name, data.system_prompt || null]
+  );
+  saveDatabase();
+
+  const result = database.exec('SELECT last_insert_rowid() as id');
+  return result[0].values[0][0] as number;
+}
+
+export async function updateConversation(id: number, data: Partial<Pick<ConversationRow, 'title' | 'system_prompt' | 'summary' | 'summary_updated_at' | 'message_count' | 'is_archived'>>): Promise<void> {
+  const database = await getDatabase();
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (data.title !== undefined) { fields.push('title = ?'); values.push(data.title); }
+  if (data.system_prompt !== undefined) { fields.push('system_prompt = ?'); values.push(data.system_prompt); }
+  if (data.summary !== undefined) { fields.push('summary = ?'); values.push(data.summary); }
+  if (data.summary_updated_at !== undefined) { fields.push('summary_updated_at = ?'); values.push(data.summary_updated_at); }
+  if (data.message_count !== undefined) { fields.push('message_count = ?'); values.push(data.message_count); }
+  if (data.is_archived !== undefined) { fields.push('is_archived = ?'); values.push(data.is_archived); }
+
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(id);
+
+  database.run(`UPDATE conversations SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export async function deleteConversation(id: number): Promise<void> {
+  const database = await getDatabase();
+  database.run('DELETE FROM conversations WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+export async function getMessagesByConversationId(conversationId: number): Promise<ChatMessageRow[]> {
+  const database = await getDatabase();
+  const results = database.exec(
+    'SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC',
+    [conversationId]
+  );
+  if (results.length === 0) return [];
+
+  const columns = results[0].columns;
+  return results[0].values.map(row => {
+    const obj: any = {};
+    columns.forEach((col, i) => { obj[col] = row[i]; });
+    return obj as ChatMessageRow;
+  });
+}
+
+export async function createMessage(data: {
+  conversation_id: number;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  token_usage?: number;
+}): Promise<number> {
+  const database = await getDatabase();
+  database.run(
+    'INSERT INTO chat_messages (conversation_id, role, content, token_usage) VALUES (?, ?, ?, ?)',
+    [data.conversation_id, data.role, data.content, data.token_usage || 0]
+  );
+
+  // 更新对话的 message_count 和 updated_at
+  database.run(
+    'UPDATE conversations SET message_count = message_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [data.conversation_id]
+  );
+
+  saveDatabase();
+
+  const result = database.exec('SELECT last_insert_rowid() as id');
+  return result[0].values[0][0] as number;
+}
+
+export async function getMessageCount(conversationId: number): Promise<number> {
+  const database = await getDatabase();
+  const result = database.exec('SELECT COUNT(*) as count FROM chat_messages WHERE conversation_id = ?', [conversationId]);
+  return result.length > 0 ? (result[0].values[0][0] as number) : 0;
 }

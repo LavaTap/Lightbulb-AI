@@ -3,6 +3,7 @@ import cors from 'cors';
 import generateRoutes from './routes/generate.js';
 import recordsRoutes from './routes/records.js';
 import modelConfigsRoutes from './routes/modelConfigs.js';
+import chatRoutes from './routes/chat.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -36,6 +37,7 @@ export function createApp(): Express {
   app.use('/api', generateRoutes);
   app.use('/api/records', recordsRoutes);
   app.use('/api/model-configs', modelConfigsRoutes);
+  app.use('/api/chat', chatRoutes);
 
   // Error handler
   app.use(errorHandler);

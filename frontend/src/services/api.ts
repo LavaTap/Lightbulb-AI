@@ -14,7 +14,12 @@ import type {
   TestConnectionRequest,
   TestConnectionResponse,
   DetectCapabilitiesResponse,
+  CreateConversationRequest,
+  SendMessageRequest,
+  ConversationsResponse,
+  ConversationDetailResponse,
 } from '@/types/api';
+import type { APIConfig } from '@/types/index';
 
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -112,6 +117,44 @@ export const modelConfigsApi = {
   detectCapabilities: async (data: TestConnectionRequest): Promise<DetectCapabilitiesResponse> => {
     const response = await api.post('/model-configs/detect-capabilities', data);
     return response.data;
+  },
+};
+
+export const chatApi = {
+  getConversations: async (page = 1, pageSize = 20): Promise<ConversationsResponse> => {
+    const response = await api.get('/chat/conversations', { params: { page, pageSize } });
+    return response.data;
+  },
+
+  getConversation: async (id: number): Promise<ConversationDetailResponse> => {
+    const response = await api.get(`/chat/conversations/${id}`);
+    return response.data;
+  },
+
+  createConversation: async (data: CreateConversationRequest): Promise<any> => {
+    const response = await api.post('/chat/conversations', data);
+    return response.data.data;
+  },
+
+  updateConversation: async (id: number, data: { title?: string; systemPrompt?: string }): Promise<void> => {
+    await api.put(`/chat/conversations/${id}`, data);
+  },
+
+  deleteConversation: async (id: number): Promise<void> => {
+    await api.delete(`/chat/conversations/${id}`);
+  },
+
+  // SSE streaming - 使用原生 fetch，因为 axios 不支持流式响应
+  sendMessage: async (conversationId: number, content: string, config: APIConfig): Promise<Response> => {
+    return fetch(`/api/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, config }),
+    });
+  },
+
+  triggerSummarize: async (conversationId: number, config: APIConfig): Promise<void> => {
+    await api.post(`/chat/conversations/${conversationId}/summarize`, { config });
   },
 };
 

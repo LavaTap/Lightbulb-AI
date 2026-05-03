@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { InspirationPage } from '@/pages/InspirationPage';
+import { ChatPage } from '@/pages/ChatPage';
 import { CharacterGenPage } from '@/pages/CharacterGenPage';
 import { ThreeViewPage } from '@/pages/ThreeViewPage';
 import { PosterGenPage } from '@/pages/PosterGenPage';
@@ -17,6 +18,8 @@ function App() {
     switch (activeTab) {
       case 'inspiration':
         return <InspirationPage />;
+      case 'chat':
+        return <ChatPage />;
       case 'character':
         return <CharacterGenPage />;
       case 'threeview':

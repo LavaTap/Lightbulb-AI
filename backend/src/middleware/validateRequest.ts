@@ -55,3 +55,30 @@ export const createRecordSchema = z.object({
   modelName: z.string().min(1),
   tokenUsage: z.number().int().min(0),
 });
+
+// Chat schemas
+const configSchema = z.object({
+  provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
+  model: z.string().min(1),
+  endpoint: z.string().optional(),
+  apiKey: z.string().min(1),
+  useProxy: z.boolean().optional(),
+  proxyEndpoint: z.string().optional(),
+});
+
+export const createConversationSchema = z.object({
+  title: z.string().optional(),
+  modelProvider: z.string().min(1),
+  modelName: z.string().min(1),
+  systemPrompt: z.string().optional(),
+});
+
+export const sendMessageSchema = z.object({
+  content: z.string().min(1, '消息内容不能为空'),
+  config: configSchema,
+});
+
+export const updateConversationSchema = z.object({
+  title: z.string().optional(),
+  systemPrompt: z.string().optional(),
+});

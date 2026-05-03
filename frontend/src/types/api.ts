@@ -1,4 +1,4 @@
-import type { APIConfig, VisionAnalysisResult, ModelConfig, ModelCategory } from './index';
+import type { APIConfig, VisionAnalysisResult, ModelConfig, ModelCategory, Conversation, ChatMessage } from './index';
 
 export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
@@ -107,4 +107,33 @@ export interface DetectCapabilitiesResponse {
     capabilities: string[];
     category: ModelCategory;
   };
+}
+
+// Chat API types
+export interface CreateConversationRequest {
+  title?: string;
+  modelProvider: string;
+  modelName: string;
+  systemPrompt?: string;
+}
+
+export interface SendMessageRequest {
+  content: string;
+  config: APIConfig;
+}
+
+export interface ConversationsResponse {
+  success: boolean;
+  data: {
+    conversations: Conversation[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
+export interface ConversationDetailResponse {
+  success: boolean;
+  data: Conversation & { messages: ChatMessage[] };
 }

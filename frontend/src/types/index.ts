@@ -9,7 +9,7 @@ export interface APIConfig {
 
 export interface GenerationRecord {
   id: number;
-  featureType: 'inspiration' | 'character' | 'threeview' | 'poster';
+  featureType: 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster';
   prompt?: string;
   uploadImages: string[];
   generatedImages: string[];
@@ -29,7 +29,7 @@ export interface VisionAnalysisResult {
 // 分析类别类型
 export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
-export type FeatureType = 'inspiration' | 'character' | 'threeview' | 'poster' | 'cg';
+export type FeatureType = 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster' | 'cg';
 
 // Model capability categories
 export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'image-understanding' | 'multimodal' | 'text';
@@ -49,6 +49,29 @@ export interface ModelConfig {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// Chat types
+export interface Conversation {
+  id: number;
+  title: string;
+  modelProvider: string;
+  modelName: string;
+  systemPrompt?: string;
+  summary?: string;
+  messageCount: number;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversationId: number;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  tokenUsage: number;
+  createdAt: string;
 }
 
 // Provider info with supported models and capabilities
