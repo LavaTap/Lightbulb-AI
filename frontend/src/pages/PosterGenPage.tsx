@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Wand2, Download, Image, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useGeneration } from '@/hooks/useGeneration';
-import { useApiConfig } from '@/hooks/useApiConfig';
-import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
+import { modelConfigToApiConfig } from '@/lib/model-utils';
 import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
@@ -50,6 +49,7 @@ export function PosterGenPage() {
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [posterSizeKey, setPosterSizeKey] = useState<string>(DEFAULT_SIZE);
+  const [selectedModel, setSelectedModel] = useState<string>('wanx');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   
   const selectedSizeOption = POSTER_SIZE_OPTIONS.find(o => o.label === posterSizeKey) || POSTER_SIZE_OPTIONS[0];
@@ -63,28 +63,14 @@ export function PosterGenPage() {
   };
   
   const { isLoading, error, generatePoster } = useGeneration();
-  const { modelConfigs, getConfigsByCategory } = useApiConfig();
-  const initRef = useRef(false);
-
-  const selectedModelName = selectedModelConfig?.model || '';
-  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
-
-  useEffect(() => {
-    if (initRef.current || modelConfigs.length === 0) return;
-    const configs = getConfigsByCategory(['multimodal']);
-    if (configs.length === 0) return;
-    initRef.current = true;
-    const persistedId = getPersistedModelId('poster');
-    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
-    setSelectedModelConfig(match || configs[0]);
-  }, [modelConfigs, getConfigsByCategory]);
 
   const handleGenerate = async () => {
     if (characterImages.length === 0 || !prompt.trim()) return;
-    
+
     try {
       const allImages = [...characterImages, ...posterReference];
-      const image = await generatePoster(allImages, prompt, getAPISize(), selectedApiConfig || undefined);
+      const config = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : undefined;
+      const image = await generatePoster(allImages, prompt, getAPISize(), config);
       setGeneratedImage(image);
     } catch (e) {
       console.error(e);
@@ -98,9 +84,9 @@ export function PosterGenPage() {
     link.click();
   };
 
-  const handleModelChange = (modelId: string, config: ModelConfig) => {
-    setSelectedModelConfig(config);
-    setPersistedModelId('poster', config.id.toString());
+  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
+    setSelectedModel(modelConfig.model);
+    setSelectedModelConfig(modelConfig);
   };
 
   return (
@@ -121,8 +107,8 @@ export function PosterGenPage() {
             海报尺寸
           </CardTitle>
           <ModelDropdown
-            category="multimodal"
-            selectedModel={selectedModelName}
+            category={['text-to-image', 'image-to-image']}
+            selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />
         </CardHeader>

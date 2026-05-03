@@ -28,10 +28,15 @@ function serializeCategory(category: any): string {
  */
 function deserializeCategory(category: any): string | string[] {
   if (!category) return 'vision';
-  const str = String(category);
+  let str = String(category);
+  // 归一化 legacy 类别
+  str = str.replace(/image-understanding/g, 'vision').replace(/multimodal/g, 'vision');
   // 如果包含逗号，解析为数组
   if (str.includes(',')) {
-    return str.split(',').map(s => s.trim()).filter(Boolean);
+    const items = str.split(',').map(s => s.trim()).filter(Boolean);
+    // 去重
+    const unique = [...new Set(items)];
+    return unique.length === 1 ? unique[0] : unique;
   }
   return str;
 }
@@ -51,7 +56,7 @@ const modelConfigSchema = z.object({
 
 const testConnectionSchema = z.object({
   provider: z.string(),
-  apiKey: z.string(),
+  apiKey: z.string().default(''),
   model: z.string(),
   endpoint: z.string().optional(),
   useProxy: z.boolean().optional(),
@@ -172,7 +177,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     res.json({ success: true, data: { id } });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({ success: false, error: error.errors });
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
     } else {
       next(error);
     }
@@ -210,7 +215,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     res.json({ success: true });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({ success: false, error: error.errors });
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
     } else {
       next(error);
     }
@@ -244,7 +249,12 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
   try {
     const data = testConnectionSchema.parse(req.body);
     console.log('[Test Connection] Starting test for provider:', data.provider);
-    
+
+    if (!data.apiKey) {
+      res.json({ success: false, message: 'API Key 未配置，请填写后再测试' });
+      return;
+    }
+
     let success = false;
     let message = '';
     
@@ -298,6 +308,85 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
           message = '无法连接到 API 服务，请检查代理设置';
         } else if (err.code === 'ETIMEDOUT') {
           message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    } else if (data.provider === 'aliyun') {
+      // 阿里云 DashScope API 测试
+      const baseUrl = data.useProxy && data.proxyEndpoint
+        ? data.proxyEndpoint
+        : (data.endpoint || 'https://dashscope.aliyuncs.com');
+      const isWanxModel = data.model.toLowerCase().includes('wanx');
+
+      try {
+        if (isWanxModel) {
+          // wanx 图像模型：发送轻量请求，400 表示认证通过
+          const response = await axios.post(
+            `${baseUrl}/api/v1/services/aigc/multimodal-generation/generation`,
+            { model: data.model, input: { messages: [{ role: 'user', content: 'test' }] } },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+          );
+          success = true;
+          message = 'API 连接成功（阿里云 DashScope）';
+        } else {
+          // 文本/视觉模型：使用兼容模式
+          const response = await axios.post(
+            `${baseUrl}/compatible-mode/v1/chat/completions`,
+            { model: data.model, messages: [{ role: 'user', content: '测试连接，请回复OK' }], max_tokens: 10 },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 }
+          );
+          success = response.status === 200 && response.data?.choices;
+          message = 'API 连接成功（阿里云）';
+        }
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 400) {
+          // 400 表示认证通过，只是请求参数不完整
+          success = true;
+          message = 'API 连接成功（阿里云 DashScope）';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else if (err.code === 'ETIMEDOUT') {
+          message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    } else if (data.provider === 'tencent') {
+      // 腾讯云混元 API 测试
+      const isTokenHub = (data.endpoint || '').includes('tokenhub') || (data.endpoint || '').includes('tencentmaas');
+
+      try {
+        if (isTokenHub) {
+          // TokenHub 模式：测试 /lite 端点
+          const baseUrl = data.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image';
+          const response = await axios.post(
+            `${baseUrl.replace(/\/$/, '')}/lite`,
+            { model: data.model, prompt: 'test', rsp_img_type: 'url' },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 }
+          );
+          success = response.status === 200;
+          message = 'API 连接成功（腾讯混元 TokenHub）';
+        } else {
+          // 标准 API：验证 Key 格式（SecretId:SecretKey）
+          const parts = (data.apiKey || '').split(':');
+          if (parts.length < 2) {
+            message = '腾讯云 API Key 格式错误，请使用 SecretId:SecretKey 格式';
+          } else {
+            success = true;
+            message = 'API Key 格式正确（腾讯混元标准 API）';
+          }
+        }
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 400) {
+          success = true;
+          message = 'API 连接成功（腾讯混元 TokenHub）';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
         } else {
           message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
         }
@@ -380,7 +469,7 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
     res.json({ success, message });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({ success: false, error: error.errors });
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
     } else {
       next(error);
     }
@@ -482,6 +571,11 @@ router.post('/detect-capabilities', async (req: Request, res: Response, next: Ne
       capabilities.push('text');
     }
 
+    // 归一化 legacy 类别
+    if (category === 'image-understanding' || category === 'multimodal') {
+      category = 'vision';
+    }
+
     console.log('[Detect Capabilities] Result:', { capabilities, category });
 
     res.json({
@@ -493,7 +587,7 @@ router.post('/detect-capabilities', async (req: Request, res: Response, next: Ne
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({ success: false, error: error.errors });
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
     } else {
       next(error);
     }

@@ -6,11 +6,52 @@ const visionService_js_1 = require("../services/visionService.js");
 const imageGenService_js_1 = require("../services/imageGenService.js");
 const posterService_js_1 = require("../services/posterService.js");
 const zod_1 = require("zod");
+function toAPIConfig(data) {
+    return {
+        provider: data.provider,
+        model: data.model,
+        endpoint: data.endpoint || '',
+        apiKey: data.apiKey,
+        useProxy: data.useProxy || false,
+        proxyEndpoint: data.proxyEndpoint || '',
+    };
+}
 const router = (0, express_1.Router)();
+/**
+ * 从错误对象中提取可读的错误信息
+ * 优先级: response.body > response.data.error.message > error.message > fallback
+ */
+function extractErrorMessage(error) {
+    // Axios 风格错误 (response.data)
+    if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'string')
+            return data;
+        if (data.error) {
+            if (typeof data.error === 'string')
+                return data.error;
+            if (data.error?.message)
+                return data.error.message;
+            if (Array.isArray(data.error))
+                return data.error.map((e) => e.message || JSON.stringify(e)).join('; ');
+        }
+        if (data.message)
+            return data.message;
+    }
+    // OpenAI SDK 风格错误
+    if (error.message)
+        return error.message;
+    // HTTP status + statusText
+    if (error.response?.status && error.response?.statusText) {
+        return `HTTP ${error.response.status}: ${error.response.statusText}`;
+    }
+    return '未知错误，请查看后端日志';
+}
 // Vision analyze endpoint
-router.post('/vision/analyze', async (req, res, next) => {
+router.post('/vision/analyze', async (req, res) => {
     try {
-        const { imageBase64, config, category } = validateRequest_js_1.analyzeSchema.parse(req.body);
+        const { imageBase64, config: rawConfig, category } = validateRequest_js_1.analyzeSchema.parse(req.body);
+        const config = toAPIConfig(rawConfig);
         console.log('[Vision Analyze] Starting...');
         console.log('[Config]', JSON.stringify({
             provider: config.provider,
@@ -31,30 +72,37 @@ router.post('/vision/analyze', async (req, res, next) => {
     catch (error) {
         console.error('[Vision Analyze ERROR]', error.message);
         console.error('[Stack]', error.stack);
+        // 提取详细错误信息
+        const errorMessage = extractErrorMessage(error);
         if (error.code === 'ECONNREFUSED') {
-            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
         }
         else if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-            res.status(504).json({ success: false, error: 'API 请求超时，请检查网络连接' });
+            res.status(504).json({ success: false, error: 'API 请求超时，请检查网络连接', detail: errorMessage });
         }
         else if (error.status === 401 || error.message?.includes('401')) {
-            res.status(401).json({ success: false, error: 'API Key 无效或已过期' });
+            res.status(401).json({ success: false, error: 'API Key 无效或已过期', detail: errorMessage });
         }
         else if (error.status === 429) {
-            res.status(429).json({ success: false, error: 'API 请求过于频繁，请稍后重试' });
+            res.status(429).json({ success: false, error: 'API 请求过于频繁，请稍后重试', detail: errorMessage });
         }
         else if (error instanceof zod_1.ZodError) {
             res.status(400).json({ success: false, error: error.errors });
         }
+        else if (error.status || error.response?.status) {
+            const statusCode = error.status || error.response?.status;
+            res.status(statusCode).json({ success: false, error: errorMessage });
+        }
         else {
-            next(error);
+            res.status(500).json({ success: false, error: errorMessage });
         }
     }
 });
 // Image generate endpoint
-router.post('/image/generate', async (req, res, next) => {
+router.post('/image/generate', async (req, res) => {
     try {
-        const { prompt, config, size, referenceImage } = validateRequest_js_1.generateImageSchema.parse(req.body);
+        const { prompt, config: rawConfig, size, referenceImage } = validateRequest_js_1.generateImageSchema.parse(req.body);
+        const config = toAPIConfig(rawConfig);
         console.log('[Image Generate] Starting...');
         console.log('[Config]', JSON.stringify({
             provider: config.provider,
@@ -73,29 +121,37 @@ router.post('/image/generate', async (req, res, next) => {
     }
     catch (error) {
         console.error('[Image Generate ERROR]', error.message);
+        console.error('[Stack]', error.stack);
+        // 提取详细错误信息
+        const errorMessage = extractErrorMessage(error);
         if (error.code === 'ECONNREFUSED') {
-            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
         }
         else if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-            res.status(504).json({ success: false, error: 'API 请求超时' });
+            res.status(504).json({ success: false, error: 'API 请求超时', detail: errorMessage });
         }
         else if (error.status === 401) {
-            res.status(401).json({ success: false, error: 'API Key 无效' });
+            res.status(401).json({ success: false, error: 'API Key 无效', detail: errorMessage });
         }
         else if (error instanceof zod_1.ZodError) {
             res.status(400).json({ success: false, error: error.errors });
         }
+        else if (error.status || error.response?.status) {
+            const statusCode = error.status || error.response?.status;
+            res.status(statusCode).json({ success: false, error: errorMessage });
+        }
         else {
-            next(error);
+            res.status(500).json({ success: false, error: errorMessage });
         }
     }
 });
 // Poster generate endpoint
-router.post('/poster/generate', async (req, res, next) => {
+router.post('/poster/generate', async (req, res) => {
     try {
-        const { images, prompt, config } = validateRequest_js_1.generatePosterSchema.parse(req.body);
+        const { images, prompt, config: rawConfig, size } = validateRequest_js_1.generatePosterSchema.parse(req.body);
+        const config = toAPIConfig(rawConfig);
         console.log('[Poster Generate] Starting...');
-        const { imageBase64, tokenUsage } = await (0, posterService_js_1.generatePoster)(images, prompt, config);
+        const { imageBase64, tokenUsage } = await (0, posterService_js_1.generatePoster)(images, prompt, config, size);
         res.json({
             success: true,
             data: { imageBase64 },
@@ -104,14 +160,21 @@ router.post('/poster/generate', async (req, res, next) => {
     }
     catch (error) {
         console.error('[Poster Generate ERROR]', error.message);
+        console.error('[Stack]', error.stack);
+        // 提取详细错误信息
+        const errorMessage = extractErrorMessage(error);
         if (error.code === 'ECONNREFUSED') {
-            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置' });
+            res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
         }
         else if (error instanceof zod_1.ZodError) {
             res.status(400).json({ success: false, error: error.errors });
         }
+        else if (error.status || error.response?.status) {
+            const statusCode = error.status || error.response?.status;
+            res.status(statusCode).json({ success: false, error: errorMessage });
+        }
         else {
-            next(error);
+            res.status(500).json({ success: false, error: errorMessage });
         }
     }
 });

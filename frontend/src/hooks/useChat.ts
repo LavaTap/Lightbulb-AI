@@ -14,10 +14,13 @@ export function useChat() {
   const abortRef = useRef<AbortController | null>(null);
   const { getConfigsByCategory } = useApiConfig();
 
-  const getChatApiConfig = useCallback((): APIConfig | null => {
-    const textConfigs = getConfigsByCategory(['text', 'multimodal', 'vision']);
+  const getChatApiConfig = useCallback((modelName?: string): APIConfig | null => {
+    const textConfigs = getConfigsByCategory('text');
     if (textConfigs.length === 0) return null;
-    const config = textConfigs[0];
+    // 优先使用指定模型，否则取第一个
+    const config = modelName
+      ? textConfigs.find(c => c.model === modelName) || textConfigs[0]
+      : textConfigs[0];
     return {
       provider: config.provider as APIConfig['provider'],
       model: config.model,

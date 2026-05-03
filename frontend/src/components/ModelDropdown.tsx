@@ -21,11 +21,9 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
   const categories = Array.isArray(category) ? category : [category];
   
   const categoryLabels: Record<string, string> = {
-    vision: '多模态 / 视觉分析',
+    vision: '视觉分析',
     'text-to-image': '文生图',
     'image-to-image': '图生图',
-    'image-understanding': '图文理解',
-    multimodal: '图文多模态',
     text: '纯文本',
   };
 
@@ -97,22 +95,20 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
                             使用中
                           </span>
                         )}
-                        <span className={cn(
-                          "text-xs px-1.5 py-0.5 rounded",
-                          config.category === 'multimodal'
-                            ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                            : config.category === 'vision'
+                        {(Array.isArray(config.category) ? config.category : [config.category]).map((cat) => (
+                          <span key={cat} className={cn(
+                            "text-xs px-1.5 py-0.5 rounded",
+                            cat === 'vision'
                               ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                              : config.category === 'text-to-image'
+                              : cat === 'text-to-image'
                                 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                : config.category === 'image-to-image'
+                                : cat === 'image-to-image'
                                   ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                                  : config.category === 'image-understanding'
-                                    ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        )}>
-                          {config.category === 'multimodal' ? '图文多模态' : config.category === 'vision' ? '视觉' : config.category === 'text-to-image' ? '文生图' : config.category === 'image-to-image' ? '图生图' : config.category === 'image-understanding' ? '图文理解' : '文本'}
-                        </span>
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                          )}>
+                            {categoryLabels[cat] || cat}
+                          </span>
+                        ))}
                       </div>
                     </div>
                     {selectedConfig?.id === config.id && (

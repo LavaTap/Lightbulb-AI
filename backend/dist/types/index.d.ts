@@ -1,5 +1,5 @@
 export interface APIConfig {
-    provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'custom';
+    provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'aliyun' | 'bytedance' | 'baidu' | 'tencent' | 'gptimage2' | 'custom';
     model: string;
     endpoint: string;
     apiKey: string;
@@ -14,10 +14,12 @@ export interface VisionAnalysisResult {
 }
 export interface GenerationRecord {
     id: number;
-    featureType: 'inspiration' | 'character' | 'threeview' | 'poster';
+    featureType: 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster';
     prompt?: string;
     uploadImages: string;
     generatedImages: string;
+    uploadImagesOriginal?: string;
+    generatedImagesOriginal?: string;
     modelProvider: string;
     modelName: string;
     tokenUsage: number;

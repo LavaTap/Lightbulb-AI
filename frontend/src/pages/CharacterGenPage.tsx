@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Wand2, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,38 +6,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
-import { useApiConfig } from '@/hooks/useApiConfig';
-import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
+import { modelConfigToApiConfig } from '@/lib/model-utils';
 import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
 export function CharacterGenPage() {
   const [prompt, setPrompt] = useState('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('dall-e-3');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
-  
+
   const { isLoading, error, generate } = useGeneration();
-  const { modelConfigs, getConfigsByCategory } = useApiConfig();
-  const initRef = useRef(false);
-
-  const selectedModelName = selectedModelConfig?.model || '';
-  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
-
-  useEffect(() => {
-    if (initRef.current || modelConfigs.length === 0) return;
-    const configs = getConfigsByCategory(['text-to-image', 'multimodal']);
-    if (configs.length === 0) return;
-    initRef.current = true;
-    const persistedId = getPersistedModelId('character');
-    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
-    setSelectedModelConfig(match || configs[0]);
-  }, [modelConfigs, getConfigsByCategory]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    
+
     try {
-      const image = await generate(prompt, undefined, selectedApiConfig || undefined);
+      const config = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : undefined;
+      const image = await generate(prompt, undefined, config);
       setGeneratedImages([image]);
     } catch (e) {
       console.error(e);
@@ -51,9 +37,9 @@ export function CharacterGenPage() {
     link.click();
   };
 
-  const handleModelChange = (modelId: string, config: ModelConfig) => {
-    setSelectedModelConfig(config);
-    setPersistedModelId('character', config.id.toString());
+  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
+    setSelectedModel(modelConfig.model);
+    setSelectedModelConfig(modelConfig);
   };
 
   return (
@@ -71,8 +57,8 @@ export function CharacterGenPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>提示词</CardTitle>
           <ModelDropdown
-            category={['text-to-image', 'multimodal']}
-            selectedModel={selectedModelName}
+            category={['text-to-image', 'image-to-image']}
+            selectedModel={selectedModel}
             onModelChange={handleModelChange}
           />
         </CardHeader>

@@ -9,6 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const generate_js_1 = __importDefault(require("./routes/generate.js"));
 const records_js_1 = __importDefault(require("./routes/records.js"));
 const modelConfigs_js_1 = __importDefault(require("./routes/modelConfigs.js"));
+const chat_js_1 = __importDefault(require("./routes/chat.js"));
 const errorHandler_js_1 = require("./middleware/errorHandler.js");
 function createApp() {
     const app = (0, express_1.default)();
@@ -35,6 +36,7 @@ function createApp() {
     app.use('/api', generate_js_1.default);
     app.use('/api/records', records_js_1.default);
     app.use('/api/model-configs', modelConfigs_js_1.default);
+    app.use('/api/chat', chat_js_1.default);
     // Error handler
     app.use(errorHandler_js_1.errorHandler);
     return app;

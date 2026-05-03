@@ -144,8 +144,6 @@ const CATEGORY_OPTIONS = [
   { value: 'vision', label: '视觉分析 (Vision)', color: 'purple' },
   { value: 'text-to-image', label: '文生图 (Text to Image)', color: 'green' },
   { value: 'image-to-image', label: '图生图 (Image to Image)', color: 'orange' },
-  { value: 'image-understanding', label: '图文理解 (Image Understanding)', color: 'teal' },
-  { value: 'multimodal', label: '图文多模态 (Multimodal)', color: 'indigo' },
   { value: 'text', label: '纯文本 (Text Only)', color: 'blue' },
 ];
 
@@ -226,6 +224,10 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
     setTesting(true);
     setTestResult(null);
 
+    const timeoutHint = setTimeout(() => {
+      setTestResult({ success: false, message: '连接测试耗时较长，请耐心等待...' });
+    }, 10000);
+
     try {
       const result = await testConnection({
         provider: selectedProvider,
@@ -235,9 +237,11 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
         useProxy,
         proxyEndpoint: useProxy ? proxyEndpoint : undefined,
       });
+      clearTimeout(timeoutHint);
       setTestResult({ success: result.success, message: result.message });
     } catch (e: any) {
-      setTestResult({ success: false, message: e.message });
+      clearTimeout(timeoutHint);
+      setTestResult({ success: false, message: e?.message || '连接测试失败，请检查网络设置' });
     }
     setTesting(false);
   };
@@ -301,8 +305,9 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
       setConfigName('');
       setTestResult(null);
       reloadModelConfigs();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Save failed:', e);
+      setTestResult({ success: false, message: `保存失败: ${e?.message || '未知错误'}` });
     }
     setSaving(false);
   };
@@ -321,29 +326,46 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
 
   // 测试已保存的配置连接
   const handleTestSavedConfig = async (config: any) => {
+    if (!config.apiKey) {
+      setConfigTestMap(prev => ({
+        ...prev,
+        [config.id]: { loading: false, result: { success: false, message: 'API Key 未配置，请编辑配置填写 Key 后再测试' } },
+      }));
+      return;
+    }
+
     setConfigTestMap(prev => ({
       ...prev,
       [config.id]: { loading: true, result: null },
     }));
 
+    const timeoutHint = setTimeout(() => {
+      setConfigTestMap(prev => ({
+        ...prev,
+        [config.id]: { loading: true, result: { success: false, message: '连接测试耗时较长，请耐心等待...' } },
+      }));
+    }, 10000);
+
     try {
       const result = await testConnection({
         provider: config.provider,
-        apiKey: config.apiKey || '',
+        apiKey: config.apiKey,
         model: config.model,
         endpoint: config.endpoint,
         useProxy: config.useProxy,
         proxyEndpoint: config.proxyEndpoint,
       });
 
+      clearTimeout(timeoutHint);
       setConfigTestMap(prev => ({
         ...prev,
         [config.id]: { loading: false, result: { success: result.success, message: result.message } },
       }));
     } catch (e: any) {
+      clearTimeout(timeoutHint);
       setConfigTestMap(prev => ({
         ...prev,
-        [config.id]: { loading: false, result: { success: false, message: e.message } },
+        [config.id]: { loading: false, result: { success: false, message: e?.message || '连接测试失败' } },
       }));
     }
   };
@@ -542,17 +564,13 @@ export function ModelManagerContent({ onClose }: ModelManagerContentProps) {
                                 key={cat}
                                 className={cn(
                                   "px-1.5 py-0.5 rounded text-xs",
-                                  cat === 'multimodal'
-                                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                                    : cat === 'vision'
-                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : cat === 'text-to-image'
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : cat === 'image-to-image'
-                                          ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                                          : cat === 'image-understanding'
-                                            ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
-                                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                  cat === 'vision'
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : cat === 'text-to-image'
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      : cat === 'image-to-image'
+                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                 )}
                               >
                                 {opt ? opt.label.split(' ')[0] : cat}

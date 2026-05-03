@@ -41,7 +41,7 @@ export function InspirationPage() {
 
   useEffect(() => {
     if (initRef.current || modelConfigs.length === 0) return;
-    const configs = getConfigsByCategory(['vision', 'multimodal']);
+    const configs = getConfigsByCategory(['vision']);
     if (configs.length === 0) return;
     initRef.current = true;
     const persistedId = getPersistedModelId('inspiration');
@@ -75,7 +75,6 @@ export function InspirationPage() {
 
   const handleModelChange = (modelId: string, config: ModelConfig) => {
     setSelectedModelConfig(config);
-    setPersistedModelId('inspiration', config.id.toString());
   };
 
   return (
@@ -100,8 +99,8 @@ export function InspirationPage() {
                 上传图片
               </CardTitle>
           <ModelDropdown
-            category={['vision', 'multimodal']}
-            selectedModel={selectedModelName}
+            category={['vision']}
+            selectedModel={selectedModelConfig?.model || ''}
             onModelChange={handleModelChange}
           />
             </CardHeader>

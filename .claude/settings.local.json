@@ -13,7 +13,10 @@
       "Bash(curl -s http://localhost:3001/api/model-configs)",
       "Bash(curl *)",
       "Bash(node -e ' *)",
-      "Bash(node test-hunyuan.js)"
+      "Bash(node test-hunyuan.js)",
+      "Bash(npx vite *)",
+      "Bash(C:/Users/shen3/AppData/Local/Programs/Python/Python312/python.exe *)",
+      "Bash(powershell.exe -Command \"[Environment]::GetEnvironmentVariable\\('Path', 'User'\\)\")"
     ]
   }
 }

@@ -8,6 +8,33 @@ const axios_1 = __importDefault(require("axios"));
 const database_js_1 = require("../database.js");
 const zod_1 = require("zod");
 const router = (0, express_1.Router)();
+/**
+ * 规范化 category 字段：数组转 JSON 字符串存储，单值直接存储
+ */
+function serializeCategory(category) {
+    if (Array.isArray(category)) {
+        return category.join(',');
+    }
+    return String(category || 'vision');
+}
+/**
+ * 反序列化 category：逗号分隔的字符串转数组，单值保持不变
+ */
+function deserializeCategory(category) {
+    if (!category)
+        return 'vision';
+    let str = String(category);
+    // 归一化 legacy 类别
+    str = str.replace(/image-understanding/g, 'vision').replace(/multimodal/g, 'vision');
+    // 如果包含逗号，解析为数组
+    if (str.includes(',')) {
+        const items = str.split(',').map(s => s.trim()).filter(Boolean);
+        // 去重
+        const unique = [...new Set(items)];
+        return unique.length === 1 ? unique[0] : unique;
+    }
+    return str;
+}
 const modelConfigSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
     provider: zod_1.z.string().min(1),
@@ -16,13 +43,13 @@ const modelConfigSchema = zod_1.z.object({
     endpoint: zod_1.z.string().optional(),
     useProxy: zod_1.z.boolean().optional(),
     proxyEndpoint: zod_1.z.string().optional(),
-    category: zod_1.z.string().optional().default('vision'),
+    category: zod_1.z.union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())]).optional().default('vision'),
     capabilities: zod_1.z.array(zod_1.z.string()).optional(),
     isActive: zod_1.z.boolean().optional(),
 });
 const testConnectionSchema = zod_1.z.object({
     provider: zod_1.z.string(),
-    apiKey: zod_1.z.string(),
+    apiKey: zod_1.z.string().default(''),
     model: zod_1.z.string(),
     endpoint: zod_1.z.string().optional(),
     useProxy: zod_1.z.boolean().optional(),
@@ -43,7 +70,7 @@ router.get('/', async (req, res, next) => {
                 endpoint: c.endpoint,
                 useProxy: c.use_proxy === 1,
                 proxyEndpoint: c.proxy_endpoint,
-                category: c.category,
+                category: deserializeCategory(c.category),
                 capabilities: c.capabilities ? JSON.parse(c.capabilities) : [],
                 isActive: c.is_active === 1,
                 createdAt: c.created_at,
@@ -73,7 +100,7 @@ router.get('/active', async (req, res, next) => {
                 endpoint: config.endpoint,
                 useProxy: config.use_proxy === 1,
                 proxyEndpoint: config.proxy_endpoint,
-                category: config.category,
+                category: deserializeCategory(config.category),
                 capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
                 isActive: true,
                 createdAt: config.created_at,
@@ -104,7 +131,7 @@ router.get('/:id', async (req, res, next) => {
                 endpoint: config.endpoint,
                 useProxy: config.use_proxy === 1,
                 proxyEndpoint: config.proxy_endpoint,
-                category: config.category,
+                category: deserializeCategory(config.category),
                 capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
                 isActive: config.is_active === 1,
                 createdAt: config.created_at,
@@ -128,7 +155,7 @@ router.post('/', async (req, res, next) => {
             endpoint: data.endpoint || null,
             use_proxy: data.useProxy ? 1 : 0,
             proxy_endpoint: data.proxyEndpoint || null,
-            category: data.category,
+            category: serializeCategory(data.category),
             capabilities: data.capabilities ? JSON.stringify(data.capabilities) : null,
             is_active: data.isActive ? 1 : 0,
         });
@@ -140,7 +167,7 @@ router.post('/', async (req, res, next) => {
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {
-            res.status(400).json({ success: false, error: error.errors });
+            res.status(400).json({ success: false, error: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ') });
         }
         else {
             next(error);
@@ -164,7 +191,7 @@ router.put('/:id', async (req, res, next) => {
             endpoint: data.endpoint,
             use_proxy: data.useProxy !== undefined ? (data.useProxy ? 1 : 0) : undefined,
             proxy_endpoint: data.proxyEndpoint,
-            category: data.category,
+            category: data.category !== undefined ? serializeCategory(data.category) : undefined,
             capabilities: data.capabilities ? JSON.stringify(data.capabilities) : undefined,
             is_active: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined,
         });
@@ -175,7 +202,7 @@ router.put('/:id', async (req, res, next) => {
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {
-            res.status(400).json({ success: false, error: error.errors });
+            res.status(400).json({ success: false, error: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ') });
         }
         else {
             next(error);
@@ -209,6 +236,10 @@ router.post('/test-connection', async (req, res, next) => {
     try {
         const data = testConnectionSchema.parse(req.body);
         console.log('[Test Connection] Starting test for provider:', data.provider);
+        if (!data.apiKey) {
+            res.json({ success: false, message: 'API Key 未配置，请填写后再测试' });
+            return;
+        }
         let success = false;
         let message = '';
         if (data.provider === 'google') {
@@ -234,6 +265,120 @@ router.post('/test-connection', async (req, res, next) => {
                 }
             }
         }
+        else if (data.provider === 'gptimage2') {
+            // gptimage2: 使用 /v1/draw/completions 测试连通性
+            const baseUrl = data.endpoint || 'https://grsai.dakka.com.cn';
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.apiKey}`,
+            };
+            try {
+                const response = await axios_1.default.post(`${baseUrl}/v1/draw/completions`, {
+                    model: data.model || 'gpt-image-2',
+                    prompt: 'A simple blue circle on white background',
+                    aspectRatio: '1:1',
+                    webHook: '-1',
+                }, { headers, timeout: 30000 });
+                success = response.status === 200 && response.data?.code === 0 && response.data?.data?.id;
+                message = success ? 'API 连接成功（GPT Image 2 代理）' : 'API 返回异常';
+            }
+            catch (err) {
+                if (err.response?.status === 401) {
+                    message = 'API Key 无效';
+                }
+                else if (err.response?.status === 404) {
+                    message = '端点不存在，请检查 API 地址';
+                }
+                else if (err.code === 'ECONNREFUSED') {
+                    message = '无法连接到 API 服务，请检查代理设置';
+                }
+                else if (err.code === 'ETIMEDOUT') {
+                    message = 'API 请求超时';
+                }
+                else {
+                    message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+                }
+            }
+        }
+        else if (data.provider === 'aliyun') {
+            // 阿里云 DashScope API 测试
+            const baseUrl = data.useProxy && data.proxyEndpoint
+                ? data.proxyEndpoint
+                : (data.endpoint || 'https://dashscope.aliyuncs.com');
+            const isWanxModel = data.model.toLowerCase().includes('wanx');
+            try {
+                if (isWanxModel) {
+                    // wanx 图像模型：发送轻量请求，400 表示认证通过
+                    const response = await axios_1.default.post(`${baseUrl}/api/v1/services/aigc/multimodal-generation/generation`, { model: data.model, input: { messages: [{ role: 'user', content: 'test' }] } }, { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 10000 });
+                    success = true;
+                    message = 'API 连接成功（阿里云 DashScope）';
+                }
+                else {
+                    // 文本/视觉模型：使用兼容模式
+                    const response = await axios_1.default.post(`${baseUrl}/compatible-mode/v1/chat/completions`, { model: data.model, messages: [{ role: 'user', content: '测试连接，请回复OK' }], max_tokens: 10 }, { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 });
+                    success = response.status === 200 && response.data?.choices;
+                    message = 'API 连接成功（阿里云）';
+                }
+            }
+            catch (err) {
+                if (err.response?.status === 401) {
+                    message = 'API Key 无效';
+                }
+                else if (err.response?.status === 400) {
+                    // 400 表示认证通过，只是请求参数不完整
+                    success = true;
+                    message = 'API 连接成功（阿里云 DashScope）';
+                }
+                else if (err.code === 'ECONNREFUSED') {
+                    message = '无法连接到 API 服务，请检查代理设置';
+                }
+                else if (err.code === 'ETIMEDOUT') {
+                    message = 'API 请求超时';
+                }
+                else {
+                    message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+                }
+            }
+        }
+        else if (data.provider === 'tencent') {
+            // 腾讯云混元 API 测试
+            const isTokenHub = (data.endpoint || '').includes('tokenhub') || (data.endpoint || '').includes('tencentmaas');
+            try {
+                if (isTokenHub) {
+                    // TokenHub 模式：测试 /lite 端点
+                    const baseUrl = data.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image';
+                    const response = await axios_1.default.post(`${baseUrl.replace(/\/$/, '')}/lite`, { model: data.model, prompt: 'test', rsp_img_type: 'url' }, { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 });
+                    success = response.status === 200;
+                    message = 'API 连接成功（腾讯混元 TokenHub）';
+                }
+                else {
+                    // 标准 API：验证 Key 格式（SecretId:SecretKey）
+                    const parts = (data.apiKey || '').split(':');
+                    if (parts.length < 2) {
+                        message = '腾讯云 API Key 格式错误，请使用 SecretId:SecretKey 格式';
+                    }
+                    else {
+                        success = true;
+                        message = 'API Key 格式正确（腾讯混元标准 API）';
+                    }
+                }
+            }
+            catch (err) {
+                if (err.response?.status === 401) {
+                    message = 'API Key 无效';
+                }
+                else if (err.response?.status === 400) {
+                    success = true;
+                    message = 'API 连接成功（腾讯混元 TokenHub）';
+                }
+                else if (err.code === 'ECONNREFUSED') {
+                    message = '无法连接到 API 服务，请检查代理设置';
+                }
+                else {
+                    message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+                }
+            }
+        }
         else {
             // OpenAI compatible: send minimal text probe
             let baseUrl = data.endpoint || 'https://api.openai.com/v1';
@@ -251,6 +396,9 @@ router.post('/test-connection', async (req, res, next) => {
             }
             else if (data.provider === 'xfyun') {
                 // 讯飞格式: APIKey:APISecret
+                headers['Authorization'] = `Bearer ${data.apiKey}`;
+            }
+            else if (data.provider === 'tencent') {
                 headers['Authorization'] = `Bearer ${data.apiKey}`;
             }
             else if (data.provider === 'custom') {
@@ -306,7 +454,7 @@ router.post('/test-connection', async (req, res, next) => {
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {
-            res.status(400).json({ success: false, error: error.errors });
+            res.status(400).json({ success: false, error: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ') });
         }
         else {
             next(error);
@@ -377,7 +525,7 @@ router.post('/detect-capabilities', async (req, res, next) => {
         }
         // 测试 2: 尝试文生图能力（对于特定模型）
         // 注意：文生图通常使用不同的 API 端点，这里通过错误信息推断
-        const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg'];
+        const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'gpt-image-2', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg', 'hy-image'];
         if (imageGenModels.some(m => model.toLowerCase().includes(m))) {
             capabilities.push('image-generation');
             // 如果已经有 vision 能力，保持 vision
@@ -386,7 +534,7 @@ router.post('/detect-capabilities', async (req, res, next) => {
             }
         }
         // 测试 3: 检查是否支持 image-editing（图生图）
-        const imageEditModels = ['gpt-image-1', 'wanx-v1'];
+        const imageEditModels = ['gpt-image-1', 'gpt-image-2', 'wanx-v1', 'hy-image-v3.0'];
         if (imageEditModels.some(m => model.toLowerCase().includes(m))) {
             if (!capabilities.includes('image-editing')) {
                 capabilities.push('image-editing');
@@ -395,6 +543,10 @@ router.post('/detect-capabilities', async (req, res, next) => {
         // 如果只有 text 能力
         if (capabilities.length === 0) {
             capabilities.push('text');
+        }
+        // 归一化 legacy 类别
+        if (category === 'image-understanding' || category === 'multimodal') {
+            category = 'vision';
         }
         console.log('[Detect Capabilities] Result:', { capabilities, category });
         res.json({
@@ -407,7 +559,7 @@ router.post('/detect-capabilities', async (req, res, next) => {
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {
-            res.status(400).json({ success: false, error: error.errors });
+            res.status(400).json({ success: false, error: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ') });
         }
         else {
             next(error);

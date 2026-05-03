@@ -5,6 +5,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateImage = generateImage;
 const openai_1 = __importDefault(require("openai"));
+const crypto_1 = __importDefault(require("crypto"));
+/**
+ * 腾讯云 TC3-HMAC-SHA256 签名
+ * 参考: https://cloud.tencent.com/document/api/213/30654
+ */
+function signTc3(secretKey, service, timestamp, dateStr, payload, headers) {
+    // Step 1: 拼接 CanonicalRequest
+    const method = 'POST';
+    const canonicalUri = '/';
+    const canonicalQueryString = '';
+    const signedHeaders = Object.keys(headers).map(h => h.toLowerCase()).sort().join(';');
+    const canonicalHeaders = Object.entries(headers)
+        .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
+        .map(([k, v]) => `${k.toLowerCase()}:${v}\n`)
+        .join('');
+    const hashedPayload = crypto_1.default.createHash('sha256').update(payload).digest('hex');
+    const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${hashedPayload}`;
+    // Step 2: 拼接待签字符串
+    const algorithm = 'TC3-HMAC-SHA256';
+    const credentialScope = `${dateStr}/${service}/tc3_request`;
+    const hashedCanonicalRequest = crypto_1.default.createHash('sha256').update(canonicalRequest).digest('hex');
+    const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${hashedCanonicalRequest}`;
+    // Step 3: 计算签名
+    const secretDate = crypto_1.default.createHmac('sha256', `TC3${secretKey}`).update(dateStr).digest();
+    const secretService = crypto_1.default.createHmac('sha256', secretDate).update(service).digest();
+    const secretSigning = crypto_1.default.createHmac('sha256', secretService).update('tc3_request').digest();
+    const signature = crypto_1.default.createHmac('sha256', secretSigning).update(stringToSign).digest('hex');
+    return `${algorithm} Credential=${headers['X-TC-Key'] || ''}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+}
 async function generateImage(prompt, config, size = '1024x1024', referenceImage) {
     const model = config.model || 'dall-e-3';
     console.log('\n========== Image Generation Request ==========');
@@ -23,6 +52,14 @@ async function generateImage(prompt, config, size = '1024x1024', referenceImage)
     // 判断是否使用阿里云 qwen-image 模型
     if (model.startsWith('qwen-image')) {
         return await generateQwenImage(prompt, config, size, referenceImage);
+    }
+    // 判断是否使用腾讯混元模型（hy-image 前缀 或 endpoint 含 tokenhub 的 hy 系列模型）
+    if (model.startsWith('hy-image') || (model.startsWith('hy') && config.endpoint?.includes('tokenhub'))) {
+        return await generateTencentHunyuan(prompt, config, size, referenceImage);
+    }
+    // 判断是否使用 gpt-image-2 模型（gptimage2 代理 API，异步提交+轮询）
+    if (model === 'gpt-image-2' || config.provider === 'gptimage2') {
+        return await generateGptImage2(prompt, config, size, referenceImage);
     }
     // 使用标准的 OpenAI Images API（如 DALL-E）
     const client = createOpenAIClient(config);
@@ -57,6 +94,7 @@ async function generateQwenImage(prompt, config, size, referenceImage) {
         '1024x1024': '2048*2048', // 1:1
         '1024x1792': '1536*2688', // 9:16
         '1792x1024': '2688*1536', // 16:9
+        '2560x1440': '2560*1440', // 2K 16:9
     };
     const imageSize = sizeMap[size] || '2048*2048';
     // 构建消息内容
@@ -134,6 +172,299 @@ async function generateQwenImage(prompt, config, size, referenceImage) {
         imageBase64,
         tokenUsage
     };
+}
+/**
+ * 生成腾讯混元图片
+ *
+ * 两种接入方式：
+ * 1. 腾讯云标准 API（默认）：aiart.tencentcloudapi.com，使用 TC3-HMAC-SHA256 签名
+ * 2. TokenHub OpenAI 兼容 API：tokenhub.tencentmaas.com，使用 Bearer Token
+ *
+ * - hy-image-lite: 极速版（TextToImageLite）
+ * - hy-image-v3.0: 3.0 版（异步提交 SubmitTextToImageJob + 轮询 QueryTextToImageJob）
+ */
+async function generateTencentHunyuan(prompt, config, size, referenceImage) {
+    const endpoint = config.endpoint || 'https://aiart.tencentcloudapi.com';
+    const model = config.model;
+    // 判断是否使用 TokenHub 方式（endpoint 包含 tokenhub）
+    if (endpoint.includes('tokenhub')) {
+        return await generateTencentTokenHub(prompt, config, size, referenceImage);
+    }
+    // ---- 腾讯云标准 API 方式 ----
+    const [secretId, secretKey] = (config.apiKey || '').split(':');
+    if (!secretId || !secretKey) {
+        throw new Error('腾讯云 API Key 格式错误，请使用 SecretId:SecretKey 格式');
+    }
+    const timestamp = Math.floor(Date.now() / 1000);
+    const dateStr = new Date().toISOString().replace(/[-:]/g, '').split('T')[0]; // YYYYMMDD
+    const service = 'aiart';
+    const isLiteModel = model.includes('lite') || model.includes('Lite');
+    const isAsyncModel = model.includes('v3') || model.includes('3.0') || model.includes('preview');
+    if (isLiteModel) {
+        // 混元生图极速版 - TextToImageLite
+        console.log('[Tencent Hunyuan Lite] Using standard API...');
+        // 尺寸映射
+        const resolutionMap = {
+            '1024x1024': '1024:1024',
+            '1024x1792': '768:1344', // 9:16 近似
+            '1792x1024': '1344:768', // 16:9 近似
+            '2560x1440': '2560:1440', // 2K 16:9
+        };
+        const payload = {
+            Prompt: prompt,
+            RspImgType: 'url',
+            Resolution: resolutionMap[size] || '1024:1024',
+            LogoAdd: 0,
+        };
+        const payloadStr = JSON.stringify(payload);
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-TC-Action': 'TextToImageLite',
+            'X-TC-Key': secretId,
+            'X-TC-Timestamp': String(timestamp),
+            'X-TC-Version': '2022-12-29',
+            'X-TC-Region': 'ap-guangzhou',
+        };
+        const authorization = signTc3(secretKey, service, timestamp, dateStr, payloadStr, headers);
+        headers['Authorization'] = authorization;
+        console.log('[Tencent Hunyuan Lite] Request headers:', JSON.stringify(headers, null, 2));
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: payloadStr,
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[Tencent Hunyuan Lite ERROR]', response.status, errorText);
+            throw new Error(`Tencent Hunyuan Lite API Error: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        console.log('[Tencent Hunyuan Lite Response]', JSON.stringify(data, null, 2));
+        if (data.Response?.Error) {
+            throw new Error(`腾讯混元 API 错误: ${data.Response.Error.Code} - ${data.Response.Error.Message}`);
+        }
+        const imageUrl = data.Response?.ResultImage;
+        if (!imageUrl)
+            throw new Error('Failed to get image URL from Hunyuan Lite response');
+        // 下载图片并转换为 base64
+        const imageResponse = await fetch(imageUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+        console.log('[Tencent Hunyuan Lite] Success, image size:', (imageBase64.length / 1024).toFixed(2), 'KB');
+        return { imageBase64, tokenUsage: 1 };
+    }
+    // 异步模型（如 hy-image-v3.0 / hy3-preview）暂不支持标准 API 方式（需要异步任务处理）
+    throw new Error(`混元模型 ${model} 暂不支持标准 API，请使用自定义 endpoint 接入 TokenHub（https://tokenhub.tencentmaas.com/v1/api/image）`);
+}
+/**
+ * 通过 TokenHub OpenAI 兼容接口调用腾讯混元
+ */
+async function generateTencentTokenHub(prompt, config, size, referenceImage) {
+    const baseURL = (config.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image')
+        .replace(/\/lite\/?$/, '') // 用户可能把 endpoint 填成了 /lite 完整路径
+        .replace(/\/submit\/?$/, '')
+        .replace(/\/query\/?$/, '')
+        .replace(/\/$/, ''); // 去掉尾部斜杠
+    const model = config.model;
+    // 判断模型类型：Lite（极速版）还是异步版
+    const isLiteModel = model.includes('lite') || model.includes('Lite');
+    if (isLiteModel) {
+        console.log(`[Tencent Hunyuan TokenHub] Lite: Calling API with model=${model}...`);
+        const response = await fetch(`${baseURL}/lite`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model, // 使用用户配置的实际模型 ID
+                prompt,
+                rsp_img_type: 'url',
+            }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[Tencent Hunyuan TokenHub Lite ERROR]', response.status, errorText);
+            throw new Error(`Tencent Hunyuan Lite API Error: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        const imageUrl = data.data?.[0]?.url;
+        if (!imageUrl)
+            throw new Error('Failed to get image URL from Hunyuan Lite response');
+        const imageResponse = await fetch(imageUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+        console.log('[Tencent Hunyuan TokenHub Lite] Success, image size:', (imageBase64.length / 1024).toFixed(2), 'KB');
+        return { imageBase64, tokenUsage: 1 };
+    }
+    // 异步接口（提交 + 轮询查询），适用于 hy-image-v3.0 / hy3-preview 等模型
+    console.log(`[Tencent Hunyuan TokenHub] Async: Submitting task with model=${model}...`);
+    const submitBody = {
+        model, // 使用用户配置的实际模型 ID
+        prompt,
+    };
+    if (referenceImage) {
+        submitBody.images = [`data:image/jpeg;base64,${referenceImage}`];
+    }
+    const submitRes = await fetch(`${baseURL}/submit`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submitBody),
+    });
+    if (!submitRes.ok) {
+        const errorText = await submitRes.text();
+        throw new Error(`Tencent Hunyuan Submit Error: ${submitRes.status} - ${errorText}`);
+    }
+    const submitData = await submitRes.json();
+    const jobId = submitData.id;
+    if (!jobId)
+        throw new Error('Failed to get job ID from Hunyuan submit response');
+    console.log('[Tencent Hunyuan TokenHub] Job submitted, ID:', jobId);
+    const maxAttempts = 30;
+    for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const queryRes = await fetch(`${baseURL}/query`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ model, id: jobId }),
+        });
+        if (!queryRes.ok)
+            continue;
+        const queryData = await queryRes.json();
+        if (queryData.status === 'completed') {
+            const imageUrl = queryData.data?.[0]?.url;
+            if (!imageUrl)
+                throw new Error('No image URL in completed response');
+            const imageResponse = await fetch(imageUrl);
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+            console.log(`[Tencent Hunyuan TokenHub] Success (${model}), image size:`, (imageBase64.length / 1024).toFixed(2), 'KB');
+            return { imageBase64, tokenUsage: 1 };
+        }
+        if (queryData.status === 'failed') {
+            throw new Error(`Tencent Hunyuan (${model}) image generation failed`);
+        }
+    }
+    throw new Error(`Tencent Hunyuan (${model}) image generation timeout after 60s`);
+}
+/**
+ * 通过 gptimage2 代理 API 生成图片
+ *
+ * 使用 gptimage2 代理（https://grsai.dakka.com.cn）的异步提交+轮询模式：
+ * - 提交任务: POST /v1/draw/completions → 获取 taskId
+ * - 轮询结果: POST /v1/draw/result → 每2秒一次，最多300次（10分钟）
+ * - 支持图生图（urls 参数传参考图 base64）
+ */
+async function generateGptImage2(prompt, config, size, referenceImage) {
+    const baseURL = config.endpoint || 'https://grsai.dakka.com.cn';
+    const model = config.model || 'gpt-image-2';
+    // 尺寸映射为 aspectRatio
+    const aspectRatioMap = {
+        '1024x1024': '1:1',
+        '1024x1792': '9:16',
+        '1792x1024': '16:9',
+        '2560x1440': '16:9',
+    };
+    const aspectRatio = aspectRatioMap[size] || '1:1';
+    console.log(`[GPT Image 2] Starting generation, model=${model}, aspectRatio=${aspectRatio}, hasRef=${!!referenceImage}`);
+    // 构建提交请求体
+    const submitBody = {
+        model,
+        prompt,
+        aspectRatio,
+        webHook: '-1', // 禁用 webhook，使用轮询
+    };
+    // 如果有参考图，添加到 urls 字段
+    if (referenceImage) {
+        submitBody.urls = [`data:image/jpeg;base64,${referenceImage}`];
+    }
+    console.log('[GPT Image 2] Submitting task to:', `${baseURL}/v1/draw/completions`);
+    // Step 1: 提交任务
+    const submitRes = await fetch(`${baseURL}/v1/draw/completions`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submitBody),
+    });
+    if (!submitRes.ok) {
+        const errorText = await submitRes.text();
+        console.error('[GPT Image 2 Submit ERROR]', submitRes.status, errorText);
+        throw new Error(`GPT Image 2 Submit Error: ${submitRes.status} - ${errorText}`);
+    }
+    const submitData = await submitRes.json();
+    console.log('[GPT Image 2 Submit Response]', JSON.stringify(submitData, null, 2));
+    // gptimage2 返回格式: { code: 0, data: { id } }
+    if (submitData.code !== 0) {
+        throw new Error(`GPT Image 2 Submit Error: code=${submitData.code}, message=${submitData.message || 'unknown'}`);
+    }
+    const taskId = submitData.data?.id;
+    if (!taskId) {
+        throw new Error('Failed to get task ID from GPT Image 2 submit response');
+    }
+    console.log('[GPT Image 2] Task submitted, ID:', taskId);
+    // Step 2: 轮询结果（每2秒，最多300次 = 10分钟）
+    const maxAttempts = 300;
+    for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+            const pollRes = await fetch(`${baseURL}/v1/draw/result`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: taskId }),
+            });
+            if (!pollRes.ok)
+                continue;
+            const pollData = await pollRes.json();
+            // 格式: { code: 0, data: { id, progress, status: "succeeded"|"failed", results: [{url}] } }
+            if (pollData.code !== 0)
+                continue;
+            const task = pollData.data;
+            if (!task)
+                continue;
+            console.log(`[GPT Image 2 Poll] attempt=${i + 1}, status=${task.status}, progress=${task.progress}%`);
+            if (task.status === 'succeeded') {
+                const imageUrl = task.results?.[0]?.url;
+                if (!imageUrl) {
+                    throw new Error('GPT Image 2 task succeeded but no image URL in response');
+                }
+                // 下载图片并转换为 base64
+                console.log('[GPT Image 2] Downloading result image from:', imageUrl);
+                const imageResponse = await fetch(imageUrl);
+                if (!imageResponse.ok) {
+                    throw new Error(`Failed to download image: ${imageResponse.status}`);
+                }
+                const imageBuffer = await imageResponse.arrayBuffer();
+                const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+                console.log('[GPT Image 2] Success, image size:', (imageBase64.length / 1024).toFixed(2), 'KB');
+                return { imageBase64, tokenUsage: 1 };
+            }
+            if (task.status === 'failed') {
+                const reason = task.failure_reason || task.error || 'unknown error';
+                throw new Error(`GPT Image 2 generation failed: ${reason}`);
+            }
+            // progress < 100，继续轮询
+        }
+        catch (err) {
+            // 如果是我们主动抛出的错误（如 failed），直接抛出
+            if (err.message?.includes('GPT Image 2 generation failed') || err.message?.includes('Failed to download')) {
+                throw err;
+            }
+            // 其他网络错误继续重试
+            console.warn(`[GPT Image 2 Poll] Network error on attempt ${i + 1}:`, err.message);
+        }
+    }
+    throw new Error('GPT Image 2 image generation timeout after 600s (300 attempts)');
 }
 function createOpenAIClient(config) {
     const baseURL = config.useProxy && config.proxyEndpoint

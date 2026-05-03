@@ -63,7 +63,7 @@ export function useApiConfig() {
     endpoint: string,
     useProxy: boolean,
     proxyEndpoint: string,
-    category: ModelCategory,
+    category: ModelCategory | ModelCategory[],
     capabilities: string[],
     isActive: boolean = false
   ) => {
@@ -168,7 +168,7 @@ export function useApiConfig() {
       name?: string;
       provider?: string;
       model?: string;
-      category?: string;
+      category?: ModelCategory | ModelCategory[];
     }
   ) => {
     await modelConfigsApi.update(id, data);

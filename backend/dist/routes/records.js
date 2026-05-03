@@ -5,7 +5,7 @@ const database_js_1 = require("../database.js");
 const validateRequest_js_1 = require("../middleware/validateRequest.js");
 const zod_1 = require("zod");
 const router = (0, express_1.Router)();
-// Get all records with pagination (returns thumbnails for list display)
+// Get all records with pagination
 router.get('/', async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -31,8 +31,10 @@ router.get('/', async (req, res, next) => {
             id: r.id,
             featureType: r.feature_type,
             prompt: r.prompt,
-            uploadImages: r.upload_images, // Use thumbnails for list display
-            generatedImages: r.generated_images, // Use thumbnails for list display
+            uploadImages: r.upload_images,
+            generatedImages: r.generated_images,
+            uploadImagesOriginal: r.upload_images_original, // 原图
+            generatedImagesOriginal: r.generated_images_original, // 原图
             modelProvider: r.model_provider,
             modelName: r.model_name,
             tokenUsage: r.token_usage,
@@ -53,48 +55,7 @@ router.get('/', async (req, res, next) => {
         next(error);
     }
 });
-// Get record detail with original images
-router.get('/:id/detail', async (req, res, next) => {
-    try {
-        const id = parseInt(req.params.id);
-        if (isNaN(id)) {
-            res.status(400).json({ success: false, error: 'Invalid record ID' });
-            return;
-        }
-        const db = await (0, database_js_1.getDatabaseSync)();
-        const recordResult = db.exec('SELECT * FROM generation_records WHERE id = ?', [id]);
-        if (recordResult.length === 0 || recordResult[0].values.length === 0) {
-            res.status(404).json({ success: false, error: 'Record not found' });
-            return;
-        }
-        const columns = recordResult[0].columns;
-        const row = recordResult[0].values[0];
-        const record = {};
-        columns.forEach((col, idx) => {
-            record[col] = row[idx];
-        });
-        // Use original images if available, fallback to thumbnails
-        const formattedRecord = {
-            id: record.id,
-            featureType: record.feature_type,
-            prompt: record.prompt,
-            uploadImages: record.upload_images_original || record.upload_images,
-            generatedImages: record.generated_images_original || record.generated_images,
-            modelProvider: record.model_provider,
-            modelName: record.model_name,
-            tokenUsage: record.token_usage,
-            createdAt: record.created_at
-        };
-        res.json({
-            success: true,
-            data: formattedRecord
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
-// Create new record with both thumbnails and original images
+// Create new record
 router.post('/', async (req, res, next) => {
     try {
         const data = validateRequest_js_1.createRecordSchema.parse(req.body);
@@ -106,10 +67,10 @@ router.post('/', async (req, res, next) => {
     `, [
             data.featureType,
             data.prompt || null,
-            data.uploadImages || null, // thumbnails
-            data.generatedImages || null, // thumbnails
-            data.uploadImagesOriginal || null, // original images
-            data.generatedImagesOriginal || null, // original images
+            data.uploadImages || null,
+            data.generatedImages || null,
+            data.uploadImagesOriginal || null, // 原图
+            data.generatedImagesOriginal || null, // 原图
             data.modelProvider,
             data.modelName,
             data.tokenUsage

@@ -169,7 +169,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
   const [model, setModel] = useState('');
   const [useProxy, setUseProxy] = useState(false);
   const [proxyEndpoint, setProxyEndpoint] = useState('');
-  const [category, setCategory] = useState<ModelCategory>('vision');
+  const [category, setCategory] = useState<ModelCategory | ModelCategory[]>('vision');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -220,10 +220,14 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
 
   const handleTest = async () => {
     if (!apiKey || !model) return;
-    
+
     setTesting(true);
     setTestResult(null);
-    
+
+    const timeoutHint = setTimeout(() => {
+      setTestResult({ success: false, message: '连接测试耗时较长，请耐心等待...' });
+    }, 10000);
+
     try {
       const result = await testConnection({
         provider: selectedProvider,
@@ -233,9 +237,11 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
         useProxy,
         proxyEndpoint: useProxy ? proxyEndpoint : undefined,
       });
+      clearTimeout(timeoutHint);
       setTestResult({ success: result.success, message: result.message });
     } catch (e: any) {
-      setTestResult({ success: false, message: e.message });
+      clearTimeout(timeoutHint);
+      setTestResult({ success: false, message: e?.message || '连接测试失败，请检查网络设置' });
     }
     setTesting(false);
   };
@@ -310,8 +316,9 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
       setConfigName('');
       setTestResult(null);
       setShowCustomWarning(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save:', e);
+      setTestResult({ success: false, message: `保存失败: ${e?.message || '未知错误'}` });
     }
     setSaving(false);
   };
@@ -324,8 +331,6 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
 
   const handleActivate = async (id: number) => {
     try {
-      await useApiConfig().then(ctx => ctx.reloadModelConfigs && null);
-      // Trigger activation through API
       const { activateModelConfig } = await import('@/services/storage');
       await activateModelConfig(id);
       await reloadModelConfigs();
@@ -415,12 +420,10 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
                       <div className="flex flex-wrap gap-1 mt-1">
                         {(Array.isArray(config.category) ? config.category : [config.category]).map((cat) => {
                           const labels: Record<string, string> = {
-                            vision: '多模态',
+                            vision: '视觉',
                             'text-to-image': '文生图',
                             'image-to-image': '图生图',
-                            multimodal: '图文多模态',
                             text: '纯文本',
-                            'image-understanding': '图文理解',
                           };
                           return (
                             <span key={cat} className={cn(
@@ -428,9 +431,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
                               cat === 'vision' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
                               : cat === 'text-to-image' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                               : cat === 'image-to-image' ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                              : cat === 'multimodal' ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                              : cat === 'text' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                             )}>
                               {labels[cat] || cat}
                             </span>

@@ -32,7 +32,7 @@ export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 export type FeatureType = 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster' | 'cg';
 
 // Model capability categories
-export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'image-understanding' | 'multimodal' | 'text';
+export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'text';
 
 // Model configuration for storage
 export interface ModelConfig {
