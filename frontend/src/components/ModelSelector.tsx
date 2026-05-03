@@ -121,6 +121,21 @@ const PROVIDERS: ProviderInfo[] = [
     ],
   },
   {
+    id: 'tencent',
+    name: '腾讯云 混元',
+    models: [
+      { id: 'hy-image-lite', name: '混元生图 Lite', category: 'text-to-image', capabilities: ['image-generation'], description: '极速文生图' },
+      { id: 'hy-image-v3.0', name: '混元生图 3.0', category: ['text-to-image', 'image-to-image'], capabilities: ['image-generation', 'image-editing'], description: '文生图/图生图' },
+    ],
+  },
+  {
+    id: 'gptimage2',
+    name: 'GPT Image 2',
+    models: [
+      { id: 'gpt-image-2', name: 'GPT Image 2', category: ['text-to-image', 'image-to-image'], capabilities: ['image-generation', 'image-editing'], description: 'OpenAI 图像生成/编辑' },
+    ],
+  },
+  {
     id: 'custom',
     name: '自定义',
     models: [],

@@ -7,7 +7,7 @@ export type AnalysisCategory = z.infer<typeof analysisCategorySchema>;
 export const analyzeSchema = z.object({
   imageBase64: z.string().min(1, 'Image is required'),
   config: z.object({
-    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'custom']),
+    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
     model: z.string().min(1),
     endpoint: z.string().optional(),
     apiKey: z.string().min(1),
@@ -20,7 +20,7 @@ export const analyzeSchema = z.object({
 export const generateImageSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   config: z.object({
-    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'custom']),
+    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
     model: z.string().min(1),
     endpoint: z.string().optional(),
     apiKey: z.string().min(1),
@@ -35,7 +35,7 @@ export const generatePosterSchema = z.object({
   images: z.array(z.string()).min(1, 'At least one image is required'),
   prompt: z.string().min(1, 'Prompt is required'),
   config: z.object({
-    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'custom']),
+    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
     model: z.string().min(1),
     endpoint: z.string().optional(),
     apiKey: z.string().min(1),

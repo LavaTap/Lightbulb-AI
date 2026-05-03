@@ -1,5 +1,5 @@
 export interface APIConfig {
-  provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'aliyun' | 'bytedance' | 'baidu' | 'custom';
+  provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'aliyun' | 'bytedance' | 'baidu' | 'tencent' | 'gptimage2' | 'custom';
   model: string;
   endpoint: string;
   apiKey: string;
@@ -38,7 +38,7 @@ export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'ima
 export interface ModelConfig {
   id: number;
   name: string;
-  provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'aliyun' | 'bytedance' | 'baidu' | 'custom';
+  provider: 'openai' | 'google' | 'deepseek' | 'xfyun' | 'aliyun' | 'bytedance' | 'baidu' | 'tencent' | 'gptimage2' | 'custom';
   model: string;
   apiKey?: string;
   endpoint?: string;

@@ -81,6 +81,78 @@ function initDatabase(database: SqlJsDatabase): void {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // MCP (Model Control Plane) 相关表
+  database.run(`
+    CREATE TABLE IF NOT EXISTS model_instances (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      config_id INTEGER NOT NULL,
+      instance_id TEXT NOT NULL UNIQUE,
+      endpoint TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active', -- active, inactive, degraded
+      region TEXT,
+      version TEXT,
+      capacity INTEGER DEFAULT 100, -- 并发处理能力
+      current_load INTEGER DEFAULT 0, -- 当前负载
+      last_heartbeat DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (config_id) REFERENCES model_configs(id) ON DELETE CASCADE
+    );
+  `);
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS model_health_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      instance_id TEXT NOT NULL,
+      check_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+      status TEXT NOT NULL, -- success, failed, degraded
+      latency INTEGER, -- 响应时间(ms)
+      error_message TEXT,
+      FOREIGN KEY (instance_id) REFERENCES model_instances(instance_id) ON DELETE CASCADE
+    );
+  `);
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS model_usage_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      config_id INTEGER NOT NULL,
+      instance_id TEXT,
+      feature_type TEXT,
+      request_count INTEGER DEFAULT 0,
+      success_count INTEGER DEFAULT 0,
+      failed_count INTEGER DEFAULT 0,
+      total_latency INTEGER DEFAULT 0, -- 总响应时间(ms)
+      total_tokens_used INTEGER DEFAULT 0,
+      period_start DATETIME NOT NULL,
+      period_end DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (config_id) REFERENCES model_configs(id) ON DELETE CASCADE,
+      FOREIGN KEY (instance_id) REFERENCES model_instances(instance_id) ON DELETE SET NULL
+    );
+  `);
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS model_tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      config_id INTEGER NOT NULL,
+      tag_key TEXT NOT NULL,
+      tag_value TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (config_id) REFERENCES model_configs(id) ON DELETE CASCADE,
+      UNIQUE(config_id, tag_key)
+    );
+  `);
+
+  // 创建索引以提高搜索性能
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_status ON model_instances(status)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_config_id ON model_instances(config_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_health_checks_instance_id ON model_health_checks(instance_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_health_checks_check_time ON model_health_checks(check_time)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_usage_stats_config_id ON model_usage_stats(config_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_usage_stats_period ON model_usage_stats(period_start, period_end)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_tags_config_id ON model_tags(config_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_model_tags_key_value ON model_tags(tag_key, tag_value)`);
 }
 
 export function saveDatabase(): void {

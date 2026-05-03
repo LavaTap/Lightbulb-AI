@@ -268,6 +268,40 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
           message = `连接失败: ${err.message}`;
         }
       }
+    } else if (data.provider === 'gptimage2') {
+      // gptimage2: 使用 /v1/draw/completions 测试连通性
+      const baseUrl = data.endpoint || 'https://grsai.dakka.com.cn';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${data.apiKey}`,
+      };
+      
+      try {
+        const response = await axios.post(
+          `${baseUrl}/v1/draw/completions`,
+          {
+            model: data.model || 'gpt-image-2',
+            prompt: 'A simple blue circle on white background',
+            aspectRatio: '1:1',
+            webHook: '-1',
+          },
+          { headers, timeout: 30000 }
+        );
+        success = response.status === 200 && response.data?.code === 0 && response.data?.data?.id;
+        message = success ? 'API 连接成功（GPT Image 2 代理）' : 'API 返回异常';
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 404) {
+          message = '端点不存在，请检查 API 地址';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else if (err.code === 'ETIMEDOUT') {
+          message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
     } else {
       // OpenAI compatible: send minimal text probe
       let baseUrl = data.endpoint || 'https://api.openai.com/v1';
@@ -285,6 +319,8 @@ router.post('/test-connection', async (req: Request, res: Response, next: NextFu
         headers['Authorization'] = `Bearer ${data.apiKey}`;
       } else if (data.provider === 'xfyun') {
         // 讯飞格式: APIKey:APISecret
+        headers['Authorization'] = `Bearer ${data.apiKey}`;
+      } else if (data.provider === 'tencent') {
         headers['Authorization'] = `Bearer ${data.apiKey}`;
       } else if (data.provider === 'custom') {
         if (data.apiKey) {
@@ -424,7 +460,7 @@ router.post('/detect-capabilities', async (req: Request, res: Response, next: Ne
 
     // 测试 2: 尝试文生图能力（对于特定模型）
     // 注意：文生图通常使用不同的 API 端点，这里通过错误信息推断
-    const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg'];
+    const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'gpt-image-2', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg', 'hy-image'];
     if (imageGenModels.some(m => model.toLowerCase().includes(m))) {
       capabilities.push('image-generation');
       // 如果已经有 vision 能力，保持 vision
@@ -434,7 +470,7 @@ router.post('/detect-capabilities', async (req: Request, res: Response, next: Ne
     }
 
     // 测试 3: 检查是否支持 image-editing（图生图）
-    const imageEditModels = ['gpt-image-1', 'wanx-v1'];
+    const imageEditModels = ['gpt-image-1', 'gpt-image-2', 'wanx-v1', 'hy-image-v3.0'];
     if (imageEditModels.some(m => model.toLowerCase().includes(m))) {
       if (!capabilities.includes('image-editing')) {
         capabilities.push('image-editing');
