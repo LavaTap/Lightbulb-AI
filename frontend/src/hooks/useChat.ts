@@ -35,7 +35,7 @@ export function useChat() {
     setIsLoading(true);
     try {
       const result = await chatApi.getConversations();
-      setConversations(result.data.conversations);
+      setConversations(result.data.conversations as Conversation[]);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -74,8 +74,8 @@ export function useChat() {
         isArchived: conv.isArchived,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt,
-      });
-      setMessages(conv.messages || []);
+      } as Conversation);
+      setMessages((conv.messages || []) as ChatMessage[]);
       setError(null);
     } catch (e: any) {
       setError(e.message);

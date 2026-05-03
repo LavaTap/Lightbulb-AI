@@ -9,6 +9,7 @@ const dbPath = path.join(dataDir, 'lightbulb.db');
 
 let db: SqlJsDatabase | null = null;
 let dbReady: Promise<void> | null = null;
+let savePromise: Promise<void> | null = null;
 
 async function initDb(): Promise<void> {
   if (!fs.existsSync(dataDir)) {
@@ -188,11 +189,25 @@ function initDatabase(database: SqlJsDatabase): void {
 }
 
 export function saveDatabase(): void {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
-  }
+  if (!db) return;
+  // 串行化写入，避免并发 writeFileSync 在 Windows 上报 UNKNOWN 错误
+  const doSave = async () => {
+    // 等待上一个写入完成
+    while (savePromise) {
+      await savePromise;
+    }
+    savePromise = (async () => {
+      try {
+        const data = db!.export();
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(dbPath, buffer);
+      } finally {
+        savePromise = null;
+      }
+    })();
+    await savePromise;
+  };
+  doSave().catch(err => console.error('[DB] saveDatabase failed:', err));
 }
 
 export async function getDatabase(): Promise<SqlJsDatabase> {
