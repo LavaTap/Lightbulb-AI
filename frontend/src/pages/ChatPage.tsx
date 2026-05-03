@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Send, Square, Bot, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
-import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
+import { modelConfigToApiConfig } from '@/lib/model-utils';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType, ModelConfig } from '@/types/index';
-
-const INITIAL_VISIBLE_MESSAGES = 20;
 
 export function ChatPage() {
   const {
@@ -29,42 +27,21 @@ export function ChatPage() {
     clearError,
   } = useChat();
 
-  const { modelConfigs, getConfigsByCategory } = useApiConfig();
+  const { getConfigsByCategory } = useApiConfig();
   const [inputValue, setInputValue] = useState('');
   const [selectedTextModel, setSelectedTextModel] = useState<string>('');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [visibleMessageCount, setVisibleMessageCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const initRef = useRef(false);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
 
-  // 自动初始化选中的模型
-  useEffect(() => {
-    if (initRef.current || modelConfigs.length === 0) return;
-    const textConfigs = getConfigsByCategory('text');
-    if (textConfigs.length === 0) return;
-    initRef.current = true;
-    const persistedId = getPersistedModelId('chat');
-    const match = persistedId ? textConfigs.find(c => c.id.toString() === persistedId) : null;
-    const config = match || textConfigs[0];
-    setSelectedTextModel(config.model);
-    setSelectedModelConfig(config);
-  }, [modelConfigs, getConfigsByCategory]);
-
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // 切换对话时重置可见消息数
-  useEffect(() => {
-    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
-  }, [activeConversation?.id]);
 
   const handleCreateConversation = async () => {
     const textConfigs = getConfigsByCategory('text');
@@ -108,16 +85,6 @@ export function ChatPage() {
     }
   };
 
-  const handleModelChange = (_modelId: string, config: ModelConfig) => {
-    setSelectedTextModel(config.model);
-    setSelectedModelConfig(config);
-    setPersistedModelId('chat', config.id.toString());
-  };
-
-  const visibleMessages = messages.slice(-visibleMessageCount);
-  const hasMoreMessages = messages.length > visibleMessageCount;
-  const hiddenCount = messages.length - visibleMessageCount;
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       {/* 页面标题 */}
@@ -130,140 +97,100 @@ export function ChatPage() {
         <p className="text-muted-foreground">与 AI 进行智能对话，支持长期记忆</p>
       </motion.div>
 
-      <div className="flex gap-4 h-[calc(100vh-200px)]">
-        {/* 左侧：对话列表（可折叠） */}
-        {!sidebarCollapsed && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="w-64 lg:w-72 shrink-0"
-          >
-            <Card className="h-full flex flex-col">
-              <CardContent className="p-3 flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    对话列表
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCreateConversation}
-                      className="h-7 gap-1 text-xs"
-                    >
-                      <Plus className="h-3 w-3" />
-                      新对话
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSidebarCollapsed(true)}
-                      className="h-7 w-7 p-0"
-                      title="收起侧栏"
-                    >
-                      <PanelLeftClose className="h-4 w-4" />
-                    </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+        {/* 左侧：对话列表 */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="lg:col-span-3"
+        >
+          <Card className="h-full flex flex-col">
+            <CardContent className="p-3 flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-muted-foreground">
+                  对话列表
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCreateConversation}
+                  className="h-7 gap-1 text-xs"
+                >
+                  <Plus className="h-3 w-3" />
+                  新对话
+                </Button>
+              </div>
+
+              {/* 模型选择 */}
+              <div className="mb-3">
+                <ModelDropdown
+                  category={['text']}
+                  selectedModel={selectedTextModel}
+                  onModelChange={(_modelId: string, _config: ModelConfig) => {
+                    setSelectedTextModel(_config.model);
+                    setSelectedModelConfig(_config);
+                  }}
+                />
+              </div>
+
+              {/* 对话列表 */}
+              <div className="flex-1 overflow-y-auto space-y-1">
+                {conversations.length === 0 ? (
+                  <div className="text-center text-muted-foreground text-sm py-8">
+                    暂无对话
                   </div>
-                </div>
-
-                {/* 模型选择 */}
-                <div className="mb-3">
-                  <ModelDropdown
-                    category={['text']}
-                    selectedModel={selectedTextModel}
-                    onModelChange={handleModelChange}
-                  />
-                </div>
-
-                {/* 对话列表 */}
-                <div className="flex-1 overflow-y-auto">
-                  {conversations.length === 0 ? (
-                    <div className="text-center text-muted-foreground text-sm py-8">
-                      暂无对话
+                ) : (
+                  conversations.map(conv => (
+                    <div
+                      key={conv.id}
+                      onClick={() => selectConversation(conv.id)}
+                      className={cn(
+                        'group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-sm',
+                        activeConversation?.id === conv.id
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-muted'
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate">{conv.title}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        onClick={(e) => handleDeleteConversation(e, conv.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {conversations.map(conv => (
-                        <div
-                          key={conv.id}
-                          onClick={() => selectConversation(conv.id)}
-                          className={cn(
-                            'group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-sm',
-                            activeConversation?.id === conv.id
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:bg-muted'
-                          )}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate">{conv.title}</div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                            onClick={(e) => handleDeleteConversation(e, conv.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* 右侧：消息区域 */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex-1 min-w-0"
+          className="lg:col-span-9"
         >
           <Card className="h-full flex flex-col">
             {activeConversation ? (
               <>
                 {/* 消息头部 */}
                 <div className="px-4 py-3 border-b flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {sidebarCollapsed && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSidebarCollapsed(false)}
-                        className="h-7 w-7 p-0 shrink-0"
-                        title="展开侧栏"
-                      >
-                        <PanelLeftOpen className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <h2 className="font-medium truncate">{activeConversation.title}</h2>
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {selectedModelConfig?.model || activeConversation.modelName}
+                  <h2 className="font-medium truncate">{activeConversation.title}</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {activeConversation.modelName}
                   </span>
                 </div>
 
                 {/* 消息列表 */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* 加载更多消息按钮 */}
-                  {hasMoreMessages && (
-                    <div className="flex justify-center py-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setVisibleMessageCount(prev => prev + INITIAL_VISIBLE_MESSAGES)}
-                        className="text-xs"
-                      >
-                        加载更多 ({hiddenCount} 条)
-                      </Button>
-                    </div>
-                  )}
-
                   <AnimatePresence>
-                    {visibleMessages.map((msg, index) => (
+                    {messages.map((msg, index) => (
                       <MessageBubble key={`${msg.id}-${index}`} message={msg} />
                     ))}
                   </AnimatePresence>
@@ -325,17 +252,6 @@ export function ChatPage() {
               /* 空状态 */
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
-                  {sidebarCollapsed && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSidebarCollapsed(false)}
-                      className="mb-4"
-                    >
-                      <PanelLeftOpen className="h-4 w-4 mr-2" />
-                      展开侧栏
-                    </Button>
-                  )}
                   <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-20" />
                   <h3 className="text-lg font-medium mb-2">开始新对话</h3>
                   <p className="text-sm mb-4">点击"新对话"或直接输入消息开始</p>

@@ -17,33 +17,6 @@ import type { APIConfig } from '../types/index.js';
 
 const router = Router();
 
-function formatConversation(c: any) {
-  return {
-    id: c.id,
-    title: c.title,
-    modelProvider: c.model_provider,
-    modelName: c.model_name,
-    systemPrompt: c.system_prompt,
-    summary: c.summary,
-    summaryUpdatedAt: c.summary_updated_at,
-    messageCount: c.message_count,
-    isArchived: c.is_archived === 1,
-    createdAt: c.created_at,
-    updatedAt: c.updated_at,
-  };
-}
-
-function formatMessage(m: any) {
-  return {
-    id: m.id,
-    conversationId: m.conversation_id,
-    role: m.role,
-    content: m.content,
-    tokenUsage: m.token_usage,
-    createdAt: m.created_at,
-  };
-}
-
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     if ('status' in error) {
@@ -75,16 +48,7 @@ router.get('/conversations', async (_req: Request, res: Response) => {
     const page = parseInt(_req.query.page as string) || 1;
     const pageSize = parseInt(_req.query.pageSize as string) || 20;
     const result = await getAllConversations(page, pageSize);
-    res.json({
-      success: true,
-      data: {
-        conversations: result.conversations.map(formatConversation),
-        total: result.total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(result.total / pageSize),
-      },
-    });
+    res.json({ success: true, data: { ...result, page, pageSize, totalPages: Math.ceil(result.total / pageSize) } });
   } catch (error) {
     res.status(500).json({ success: false, error: extractErrorMessage(error) });
   }
@@ -101,7 +65,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       system_prompt: data.systemPrompt,
     });
     const conversation = await getConversationById(id);
-    res.json({ success: true, data: formatConversation(conversation) });
+    res.json({ success: true, data: conversation });
   } catch (error) {
     if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
@@ -121,7 +85,7 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
       return;
     }
     const messages = await getMessagesByConversationId(id);
-    res.json({ success: true, data: { ...formatConversation(conversation), messages: messages.map(formatMessage) } });
+    res.json({ success: true, data: { ...conversation, messages } });
   } catch (error) {
     res.status(500).json({ success: false, error: extractErrorMessage(error) });
   }
@@ -137,7 +101,7 @@ router.put('/conversations/:id', async (req: Request, res: Response) => {
       system_prompt: data.systemPrompt,
     });
     const conversation = await getConversationById(id);
-    res.json({ success: true, data: formatConversation(conversation) });
+    res.json({ success: true, data: conversation });
   } catch (error) {
     if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
