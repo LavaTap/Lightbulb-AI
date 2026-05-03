@@ -85,12 +85,20 @@ export async function maybeSummarizeConversation(
   }
 }
 
+let chromaUnavailableLogged = false;
+
 export async function getRelevantMemories(
   userMessage: string,
   config: APIConfig,
   conversationId?: number
 ): Promise<string | null> {
-  if (!isChromaAvailable()) return null;
+  if (!isChromaAvailable()) {
+    if (!chromaUnavailableLogged) {
+      console.info('[MemoryService] ChromaDB not available, chat memory disabled. Start ChromaDB to enable.');
+      chromaUnavailableLogged = true;
+    }
+    return null;
+  }
 
   try {
     const memories = await retrieveMemories({

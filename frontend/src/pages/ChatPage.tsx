@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType, ModelConfig } from '@/types/index';
 
@@ -26,11 +27,25 @@ export function ChatPage() {
     clearError,
   } = useChat();
 
-  const { getConfigsByCategory } = useApiConfig();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
   const [inputValue, setInputValue] = useState('');
-  const [selectedTextModel, setSelectedTextModel] = useState<string>('');
+  const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const initRef = useRef(false);
+
+  const selectedModelName = selectedModelConfig?.model || '';
+  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
+
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const configs = getConfigsByCategory(['text', 'multimodal', 'vision']);
+    if (configs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('chat');
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    setSelectedModelConfig(match || configs[0]);
+  }, [modelConfigs, getConfigsByCategory]);
 
   useEffect(() => {
     loadConversations();
@@ -42,16 +57,15 @@ export function ChatPage() {
   }, [messages]);
 
   const handleCreateConversation = async () => {
-    const textConfigs = getConfigsByCategory(['text', 'multimodal', 'vision']);
-    const modelConfig = textConfigs[0];
-    if (!modelConfig) {
+    const config = selectedModelConfig || getConfigsByCategory(['text', 'multimodal', 'vision'])[0];
+    if (!config) {
       alert('请先在模型管理中配置文本模型');
       return;
     }
 
     const id = await createConversation(
-      modelConfig.provider,
-      selectedTextModel || modelConfig.model,
+      config.provider,
+      config.model,
     );
     await selectConversation(id);
   };
@@ -65,7 +79,7 @@ export function ChatPage() {
       await handleCreateConversation();
     }
 
-    await sendMessage(content);
+    await sendMessage(content, selectedApiConfig || undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -80,6 +94,11 @@ export function ChatPage() {
     if (confirm('确定删除此对话？此操作不可撤销。')) {
       await deleteConversation(id);
     }
+  };
+
+  const handleModelChange = (modelId: string, config: ModelConfig) => {
+    setSelectedModelConfig(config);
+    setPersistedModelId('chat', config.id.toString());
   };
 
   return (
@@ -122,8 +141,8 @@ export function ChatPage() {
               <div className="mb-3">
                 <ModelDropdown
                   category={['text', 'multimodal', 'vision']}
-                  selectedModel={selectedTextModel}
-                  onModelChange={(_modelId: string, _config: ModelConfig) => setSelectedTextModel(_config.model)}
+                  selectedModel={selectedModelName}
+                  onModelChange={handleModelChange}
                 />
               </div>
 

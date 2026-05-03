@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Wand2, Loader2, Download, AlertCircle, ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
+import { useApiConfig } from '@/hooks/useApiConfig';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
 import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
@@ -16,9 +18,24 @@ export function ThreeViewPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisPrompt, setAnalysisPrompt] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
-  const [selectedModel, setSelectedModel] = useState<string>('wanx');
+  const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
 
   const { isLoading, error, analyze, generateThreeView } = useGeneration();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
+  const initRef = useRef(false);
+
+  const selectedModelName = selectedModelConfig?.model || '';
+  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
+
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const configs = getConfigsByCategory(['multimodal']);
+    if (configs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('threeview');
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    setSelectedModelConfig(match || configs[0]);
+  }, [modelConfigs, getConfigsByCategory]);
 
   const handleAnalyzeAndGenerate = async () => {
     if (referenceImage.length === 0) return;
@@ -26,7 +43,7 @@ export function ThreeViewPage() {
 
     setAnalyzing(true);
     try {
-      const images = await generateThreeView(referenceImage[0], analysisPrompt, userPrompt);
+      const images = await generateThreeView(referenceImage[0], analysisPrompt, userPrompt, selectedApiConfig || undefined);
       setGeneratedImages(images);
     } catch (e) {
       console.error(e);
@@ -41,19 +58,20 @@ export function ThreeViewPage() {
     link.click();
   };
 
-  const viewLabels = ['正面', '侧面', '背面'];
+  const viewLabels = ['角色设计图'];
 
-  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
-    setSelectedModel(modelConfig.model);
+  const handleModelChange = (modelId: string, config: ModelConfig) => {
+    setSelectedModelConfig(config);
+    setPersistedModelId('threeview', config.id.toString());
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center space-y-2 mb-6">
-        <h1 className="text-3xl font-bold gradient-text">角色三视图</h1>
+        <h1 className="text-3xl font-bold gradient-text">角色设计图</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          上传角色参考图，<strong>同时输入提示词（必填）</strong>，AI 将结合两者生成三张2K高清三视图
+          上传角色参考图，<strong>同时输入提示词（必填）</strong>，AI 将结合两者生成2K高清角色设计图
         </p>
       </div>
 
@@ -66,7 +84,7 @@ export function ThreeViewPage() {
             <CardContent className="p-3 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
               <p className="text-sm text-green-700 dark:text-green-300">
-                三视图输出尺寸锁定为 <strong>16:9</strong> (2560x1440) 2K高清横向宽屏比例，共生成 <strong>3张</strong>（正面/侧面/背面）
+                输出尺寸锁定为 <strong>16:9</strong> (2560x1440) 2K高清横向宽屏比例，生成 <strong>1张</strong> 角色设计图
               </p>
             </CardContent>
           </Card>
@@ -97,7 +115,7 @@ export function ThreeViewPage() {
               </div>
               <ModelDropdown
                 category="multimodal"
-                selectedModel={selectedModel}
+                selectedModel={selectedModelName}
                 onModelChange={handleModelChange}
               />
             </CardHeader>
@@ -105,7 +123,7 @@ export function ThreeViewPage() {
               <Textarea
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
-                placeholder="输入你想要的三视图描述，如：银发红瞳的女战士，穿着华丽的盔甲..."
+                placeholder="输入你想要的角色设计描述，如：银发红瞳的女战士，穿着华丽的盔甲..."
                 className="min-h-[100px]"
               />
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -126,7 +144,7 @@ export function ThreeViewPage() {
             ) : (
               <Wand2 className="w-4 h-4 mr-2" />
             )}
-            {referenceImage.length === 0 ? '请先上传参考图' : !userPrompt.trim() ? '请输入提示词' : '生成三视图'}
+            {referenceImage.length === 0 ? '请先上传参考图' : !userPrompt.trim() ? '请输入提示词' : '生成角色设计图'}
           </Button>
 
           {/* Error Message */}
@@ -211,7 +229,7 @@ export function ThreeViewPage() {
                 <div className="flex justify-center pt-2">
                   <Button variant="outline" size="sm" onClick={() => generatedImages.forEach((img, i) => handleDownload(img, `threeview-${viewLabels[i]}.png`))}>
                     <Download className="w-4 h-4 mr-2" />
-                    下载全部三视图
+                    下载图片
                   </Button>
                 </div>
               </motion.div>
@@ -220,7 +238,7 @@ export function ThreeViewPage() {
                 <div className="flex flex-col items-center justify-center min-h-[160px] text-muted-foreground p-6">
                   <Wand2 className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-2" />
                   <p className="text-sm font-medium">准备就绪</p>
-                  <p className="text-xs mt-1 text-center">填写提示词后点击"生成三视图"</p>
+                  <p className="text-xs mt-1 text-center">填写提示词后点击"生成角色设计图"</p>
                 </div>
               </Card>
             ) : null}

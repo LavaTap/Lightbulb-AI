@@ -5,7 +5,8 @@ import type { APIConfig } from '../types/index.js';
 export async function generatePoster(
   images: string[],
   prompt: string,
-  config: APIConfig
+  config: APIConfig,
+  size: '1024x1024' | '1024x1792' | '1792x1024' = '1792x1024'
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   console.log('\n========== Poster Generation Start ==========');
   console.log('[Reference Images]', images.length);
@@ -29,7 +30,7 @@ Style: ${analysis.analysis.en}.`;
   const { imageBase64, tokenUsage } = await generateImage(
     enhancedPrompt,
     config,
-    '1792x1024'
+    size
   );
   
   console.log('\n========== Poster Generation Complete ==========');

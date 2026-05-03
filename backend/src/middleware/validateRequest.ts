@@ -27,7 +27,7 @@ export const generateImageSchema = z.object({
     useProxy: z.boolean().optional(),
     proxyEndpoint: z.string().optional(),
   }),
-  size: z.enum(['1024x1024', '1024x1792', '1792x1024']).optional(),
+  size: z.enum(['1024x1024', '1024x1792', '1792x1024', '2560x1440']).optional(),
   referenceImage: z.string().optional(),  // 可选参考图 base64，用于图生图
 });
 
@@ -41,7 +41,8 @@ export const generatePosterSchema = z.object({
     apiKey: z.string().min(1),
     useProxy: z.boolean().optional(),
     proxyEndpoint: z.string().optional(),
-  })
+  }),
+  size: z.enum(['1024x1024', '1024x1792', '1792x1024', '2560x1440']).optional(),
 });
 
 export const createRecordSchema = z.object({

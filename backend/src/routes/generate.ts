@@ -4,6 +4,18 @@ import { analyzeImage } from '../services/visionService.js';
 import { generateImage } from '../services/imageGenService.js';
 import { generatePoster } from '../services/posterService.js';
 import { ZodError } from 'zod';
+import type { APIConfig } from '../types/index.js';
+
+function toAPIConfig(data: any): APIConfig {
+  return {
+    provider: data.provider,
+    model: data.model,
+    endpoint: data.endpoint || '',
+    apiKey: data.apiKey,
+    useProxy: data.useProxy || false,
+    proxyEndpoint: data.proxyEndpoint || '',
+  };
+}
 
 const router = Router();
 
@@ -38,7 +50,8 @@ function extractErrorMessage(error: any): string {
 // Vision analyze endpoint
 router.post('/vision/analyze', async (req: Request, res: Response) => {
   try {
-    const { imageBase64, config, category } = analyzeSchema.parse(req.body);
+    const { imageBase64, config: rawConfig, category } = analyzeSchema.parse(req.body);
+    const config = toAPIConfig(rawConfig);
 
     console.log('[Vision Analyze] Starting...');
     console.log('[Config]', JSON.stringify({
@@ -87,8 +100,9 @@ router.post('/vision/analyze', async (req: Request, res: Response) => {
 // Image generate endpoint
 router.post('/image/generate', async (req: Request, res: Response) => {
   try {
-    const { prompt, config, size, referenceImage } = generateImageSchema.parse(req.body);
-    
+    const { prompt, config: rawConfig, size, referenceImage } = generateImageSchema.parse(req.body);
+    const config = toAPIConfig(rawConfig);
+
     console.log('[Image Generate] Starting...');
     console.log('[Config]', JSON.stringify({
       provider: config.provider,
@@ -133,11 +147,12 @@ router.post('/image/generate', async (req: Request, res: Response) => {
 // Poster generate endpoint
 router.post('/poster/generate', async (req: Request, res: Response) => {
   try {
-    const { images, prompt, config } = generatePosterSchema.parse(req.body);
-    
+    const { images, prompt, config: rawConfig, size } = generatePosterSchema.parse(req.body);
+    const config = toAPIConfig(rawConfig);
+
     console.log('[Poster Generate] Starting...');
-    
-    const { imageBase64, tokenUsage } = await generatePoster(images, prompt, config);
+
+    const { imageBase64, tokenUsage } = await generatePoster(images, prompt, config, size);
     
     res.json({
       success: true,

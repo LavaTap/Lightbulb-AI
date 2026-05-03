@@ -94,10 +94,10 @@ export function useChat() {
     }
   }, [activeConversation, loadConversations]);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, overrideConfig?: APIConfig) => {
     if (!activeConversation) return;
 
-    const config = getChatApiConfig();
+    const config = overrideConfig || getChatApiConfig();
     if (!config) {
       setError('请先配置文本模型 API Key');
       return;

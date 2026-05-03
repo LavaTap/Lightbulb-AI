@@ -6,7 +6,14 @@
       "Bash(node -e \"const c = require\\('chromadb'\\); console.log\\(typeof c.Collection, typeof c.ChromaClient\\)\")",
       "Bash(npx tsc *)",
       "Bash(node -e \"require\\('chromadb'\\); console.log\\('chromadb OK'\\)\")",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(xargs grep *)",
+      "Bash(npx ts-node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3001/api/model-configs)",
+      "Bash(curl *)",
+      "Bash(node -e ' *)",
+      "Bash(node test-hunyuan.js)"
     ]
   }
 }

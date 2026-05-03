@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sparkles, Copy, Check, User, Mountain, Box, Sparkle, Upload, ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
+import { useApiConfig } from '@/hooks/useApiConfig';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
 import type { VisionAnalysisResult, ModelConfig, AnalysisCategory } from '@/types';
 import { cn, base64ToDataUrl } from '@/lib/utils';
 
@@ -27,15 +29,30 @@ export function InspirationPage() {
   const [images, setImages] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<VisionAnalysisResult | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [selectedVisionModel, setSelectedVisionModel] = useState<string>('gpt-4o');
+  const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<AnalysisCategory>('other');
 
   const { isLoading, error, analyze } = useGeneration();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
+  const initRef = useRef(false);
+
+  const selectedModelName = selectedModelConfig?.model || '';
+  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
+
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const configs = getConfigsByCategory(['vision', 'multimodal']);
+    if (configs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('inspiration');
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    setSelectedModelConfig(match || configs[0]);
+  }, [modelConfigs, getConfigsByCategory]);
 
   const handleAnalyze = async () => {
     if (images.length === 0) return;
     try {
-      const result = await analyze(images[0], selectedCategory);
+      const result = await analyze(images[0], selectedCategory, selectedApiConfig || undefined);
       setAnalysis(result);
     } catch (e) {
       console.error(e);
@@ -57,7 +74,8 @@ export function InspirationPage() {
   };
 
   const handleModelChange = (modelId: string, config: ModelConfig) => {
-    setSelectedVisionModel(config.model);
+    setSelectedModelConfig(config);
+    setPersistedModelId('inspiration', config.id.toString());
   };
 
   return (
@@ -83,7 +101,7 @@ export function InspirationPage() {
               </CardTitle>
           <ModelDropdown
             category={['vision', 'multimodal']}
-            selectedModel={selectedVisionModel}
+            selectedModel={selectedModelName}
             onModelChange={handleModelChange}
           />
             </CardHeader>

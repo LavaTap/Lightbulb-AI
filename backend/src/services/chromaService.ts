@@ -11,8 +11,13 @@ let available = false;
 
 export async function initChroma(): Promise<void> {
   try {
-    console.log('[ChromaService] Connecting to ChromaDB at', CHROMA_URL);
-    client = new ChromaClient({ path: CHROMA_URL });
+    // 解析 URL 为 host/port/ssl，避免 path 参数废弃警告
+    const url = new URL(CHROMA_URL);
+    client = new ChromaClient({
+      host: url.hostname,
+      port: parseInt(url.port) || 8000,
+      ssl: url.protocol === 'https:',
+    });
 
     // 测试连接
     await client.heartbeat();
@@ -28,9 +33,9 @@ export async function initChroma(): Promise<void> {
     }
 
     available = true;
-    console.log('[ChromaService] ChromaDB connected, collection ready');
-  } catch (error) {
-    console.warn('[ChromaService] ChromaDB not available, memory features disabled:', (error as Error).message);
+    console.log('[ChromaService] ChromaDB connected, memory features enabled');
+  } catch {
+    // ChromaDB 是可选的，仅在 AI 对话中用于记忆功能，不影响其他功能
     available = false;
     client = null;
     collection = null;

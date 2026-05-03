@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Wand2, Download, Image, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useGeneration } from '@/hooks/useGeneration';
+import { useApiConfig } from '@/hooks/useApiConfig';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
 import type { ModelConfig } from '@/types';
 import { base64ToDataUrl } from '@/lib/utils';
 
@@ -48,18 +50,41 @@ export function PosterGenPage() {
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [posterSizeKey, setPosterSizeKey] = useState<string>(DEFAULT_SIZE);
-  const [selectedModel, setSelectedModel] = useState<string>('wanx');
+  const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   
   const selectedSizeOption = POSTER_SIZE_OPTIONS.find(o => o.label === posterSizeKey) || POSTER_SIZE_OPTIONS[0];
+
+  // Map UI ratio to image generation size parameter
+  const getAPISize = (): '1024x1024' | '1024x1792' | '1792x1024' => {
+    const ratio = selectedSizeOption.ratio;
+    if (ratio === '9/16') return '1024x1792';
+    if (ratio === '16/9' || ratio === '21/9') return '1792x1024';
+    return '1024x1024'; // 1/1
+  };
   
   const { isLoading, error, generatePoster } = useGeneration();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
+  const initRef = useRef(false);
+
+  const selectedModelName = selectedModelConfig?.model || '';
+  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
+
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const configs = getConfigsByCategory(['multimodal']);
+    if (configs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('poster');
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    setSelectedModelConfig(match || configs[0]);
+  }, [modelConfigs, getConfigsByCategory]);
 
   const handleGenerate = async () => {
     if (characterImages.length === 0 || !prompt.trim()) return;
     
     try {
       const allImages = [...characterImages, ...posterReference];
-      const image = await generatePoster(allImages, prompt);
+      const image = await generatePoster(allImages, prompt, getAPISize(), selectedApiConfig || undefined);
       setGeneratedImage(image);
     } catch (e) {
       console.error(e);
@@ -73,8 +98,9 @@ export function PosterGenPage() {
     link.click();
   };
 
-  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
-    setSelectedModel(modelConfig.model);
+  const handleModelChange = (modelId: string, config: ModelConfig) => {
+    setSelectedModelConfig(config);
+    setPersistedModelId('poster', config.id.toString());
   };
 
   return (
@@ -96,7 +122,7 @@ export function PosterGenPage() {
           </CardTitle>
           <ModelDropdown
             category="multimodal"
-            selectedModel={selectedModel}
+            selectedModel={selectedModelName}
             onModelChange={handleModelChange}
           />
         </CardHeader>

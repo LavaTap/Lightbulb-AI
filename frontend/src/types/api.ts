@@ -31,6 +31,7 @@ export interface GeneratePosterRequest {
   images: string[];
   prompt: string;
   config: APIConfig;
+  size?: '1024x1024' | '1024x1792' | '1792x1024';
 }
 
 export interface GeneratePosterResponse {

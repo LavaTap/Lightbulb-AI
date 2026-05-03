@@ -42,10 +42,12 @@ function signTc3(
   return `${algorithm} Credential=${headers['X-TC-Key'] || ''}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
+export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024' | '2560x1440';
+
 export async function generateImage(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024' = '1024x1024',
+  size: ImageSize = '1024x1024',
   referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const model = config.model || 'dall-e-3';
@@ -116,7 +118,7 @@ export async function generateImage(
 async function generateQwenImage(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024',
+  size: ImageSize,
   referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   // 映射尺寸
@@ -124,6 +126,7 @@ async function generateQwenImage(
     '1024x1024': '2048*2048',  // 1:1
     '1024x1792': '1536*2688',  // 9:16
     '1792x1024': '2688*1536',  // 16:9
+    '2560x1440': '2560*1440',  // 2K 16:9
   };
   
   const imageSize = sizeMap[size] || '2048*2048';
@@ -234,7 +237,7 @@ async function generateQwenImage(
 async function generateTencentHunyuan(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024',
+  size: ImageSize,
   referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const endpoint = config.endpoint || 'https://aiart.tencentcloudapi.com';
@@ -267,6 +270,7 @@ async function generateTencentHunyuan(
       '1024x1024': '1024:1024',
       '1024x1792': '768:1344',  // 9:16 近似
       '1792x1024': '1344:768',  // 16:9 近似
+      '2560x1440': '2560:1440', // 2K 16:9
     };
 
     const payload: Record<string, any> = {
@@ -333,7 +337,7 @@ async function generateTencentHunyuan(
 async function generateTencentTokenHub(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024',
+  size: ImageSize,
   referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const baseURL = (config.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image')
@@ -460,7 +464,7 @@ async function generateTencentTokenHub(
 async function generateGptImage2(
   prompt: string,
   config: APIConfig,
-  size: '1024x1024' | '1024x1792' | '1792x1024',
+  size: ImageSize,
   referenceImage?: string
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const baseURL = config.endpoint || 'https://grsai.dakka.com.cn';
@@ -471,6 +475,7 @@ async function generateGptImage2(
     '1024x1024': '1:1',
     '1024x1792': '9:16',
     '1792x1024': '16:9',
+    '2560x1440': '16:9',
   };
   const aspectRatio = aspectRatioMap[size] || '1:1';
 
