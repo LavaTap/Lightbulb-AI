@@ -71,6 +71,12 @@ exports.createConversationSchema = zod_1.z.object({
 exports.sendMessageSchema = zod_1.z.object({
     content: zod_1.z.string().min(1, '消息内容不能为空'),
     config: configSchema,
+    attachments: zod_1.z.array(zod_1.z.object({
+        type: zod_1.z.string(),
+        dataBase64: zod_1.z.string(),
+        mimeType: zod_1.z.string(),
+        fileName: zod_1.z.string(),
+    })).optional(),
 });
 exports.updateConversationSchema = zod_1.z.object({
     title: zod_1.z.string().optional(),

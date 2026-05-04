@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { createConversationSchema, sendMessageSchema, updateConversationSchema } from '../middleware/validateRequest.js';
-import { chatCompletionStream, type ChatMessage } from '../services/chatService.js';
+import { chatCompletionStream, type ChatMessage, type MultimodalContent } from '../services/chatService.js';
 import { getRelevantMemories, maybeSummarizeConversation, deleteConversationMemories, generateConversationTitle } from '../services/memoryService.js';
 import { isLanceAvailable } from '../services/lanceService.js';
 import {
@@ -35,7 +35,7 @@ function formatConversation(c: any) {
 }
 
 function formatMessage(m: any) {
-  return {
+  const result: any = {
     id: m.id,
     conversationId: m.conversation_id,
     role: m.role,
@@ -43,6 +43,15 @@ function formatMessage(m: any) {
     tokenUsage: m.token_usage,
     createdAt: m.created_at,
   };
+  // 解析 attachments JSON
+  if (m.attachments) {
+    try {
+      result.attachments = JSON.parse(m.attachments);
+    } catch {
+      result.attachments = null;
+    }
+  }
+  return result;
 }
 
 function extractErrorMessage(error: unknown): string {
@@ -174,17 +183,43 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     }
 
     // 保存用户消息
+    const attachmentsJson = data.attachments ? JSON.stringify(data.attachments) : undefined;
     await createMessage({
       conversation_id: conversationId,
       role: 'user',
       content: data.content,
+      attachments: attachmentsJson,
     });
 
     // 加载历史消息
     const dbMessages = await getMessagesByConversationId(conversationId);
     const historyMessages: ChatMessage[] = dbMessages
       .slice(-50)
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => {
+        // 如果消息有附件，构建多模态格式
+        let content: string | MultimodalContent[] = m.content;
+        if (m.attachments) {
+          try {
+            const attachments = JSON.parse(m.attachments);
+            if (Array.isArray(attachments) && attachments.length > 0) {
+              const multimodalContent: MultimodalContent[] = [];
+              for (const att of attachments) {
+                if (att.type === 'image' && att.dataBase64) {
+                  multimodalContent.push({
+                    type: 'image_url',
+                    image_url: { url: `data:${att.mimeType};base64,${att.dataBase64}` },
+                  });
+                }
+              }
+              multimodalContent.push({ type: 'text', text: m.content });
+              content = multimodalContent;
+            }
+          } catch {
+            // 解析失败，保持纯文本
+          }
+        }
+        return { role: m.role, content };
+      });
 
     // 构建系统提示
     let systemPrompt = conversation.system_prompt || '你是一个有帮助的 AI 助手。';

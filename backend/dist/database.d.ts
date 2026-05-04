@@ -46,6 +46,7 @@ export interface ChatMessageRow {
     role: 'system' | 'user' | 'assistant';
     content: string;
     token_usage: number;
+    attachments: string | null;
     created_at: string;
 }
 export declare function getAllConversations(page?: number, pageSize?: number): Promise<{
@@ -67,6 +68,7 @@ export declare function createMessage(data: {
     role: 'system' | 'user' | 'assistant';
     content: string;
     token_usage?: number;
+    attachments?: string;
 }): Promise<number>;
 export declare function getMessageCount(conversationId: number): Promise<number>;
 //# sourceMappingURL=database.d.ts.map

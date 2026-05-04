@@ -65,11 +65,21 @@ export interface Conversation {
   updatedAt: string;
 }
 
+export interface MessageAttachment {
+  type: 'image';
+  dataBase64: string;
+  mimeType: string;
+  fileName: string;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatMessage {
   id: number;
   conversationId: number;
   role: 'system' | 'user' | 'assistant';
   content: string;
+  attachments?: MessageAttachment[];
   tokenUsage: number;
   createdAt: string;
 }

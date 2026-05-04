@@ -19,7 +19,7 @@ import type {
   ConversationsResponse,
   ConversationDetailResponse,
 } from '@/types/api';
-import type { APIConfig } from '@/types/index';
+import type { APIConfig, MessageAttachment } from '@/types/index';
 
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -145,11 +145,15 @@ export const chatApi = {
   },
 
   // SSE streaming - 使用原生 fetch，因为 axios 不支持流式响应
-  sendMessage: async (conversationId: number, content: string, config: APIConfig): Promise<Response> => {
+  sendMessage: async (conversationId: number, content: string, config: APIConfig, attachments?: MessageAttachment[]): Promise<Response> => {
+    const body: any = { content, config };
+    if (attachments && attachments.length > 0) {
+      body.attachments = attachments;
+    }
     return fetch(`/api/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, config }),
+      body: JSON.stringify(body),
     });
   },
 

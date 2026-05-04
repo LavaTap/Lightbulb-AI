@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft, ImagePlus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { SvgRenderer } from '@/components/SvgRenderer';
+import { ImagePreview } from '@/components/ImagePreview';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
-import { cn } from '@/lib/utils';
-import type { ChatMessage as ChatMessageType, ModelConfig } from '@/types/index';
+import { compressImage, cn, base64ToDataUrl } from '@/lib/utils';
+import type { ChatMessage as ChatMessageType, ModelConfig, MessageAttachment } from '@/types/index';
 
 export function ChatPage() {
   const {
@@ -37,10 +38,12 @@ export function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const initRef = useRef(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isNearBottomRef = useRef(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
 
   useEffect(() => {
     loadConversations();
@@ -50,11 +53,13 @@ export function ChatPage() {
   useEffect(() => {
     if (initRef.current || modelConfigs.length === 0) return;
     const textConfigs = getConfigsByCategory('text');
-    if (textConfigs.length === 0) return;
+    const visionConfigs = getConfigsByCategory('vision');
+    const configs = [...textConfigs, ...visionConfigs];
+    if (configs.length === 0) return;
     initRef.current = true;
     const persistedId = getPersistedModelId('chat');
-    const match = persistedId ? textConfigs.find(c => c.id.toString() === persistedId) : null;
-    const config = match || textConfigs[0];
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    const config = match || textConfigs[0] || visionConfigs[0];
     setSelectedTextModel(config.model);
     setSelectedModelConfig(config);
   }, [modelConfigs, getConfigsByCategory]);
@@ -95,17 +100,45 @@ export function ChatPage() {
     await selectConversation(id);
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue;
+      try {
+        const dataBase64 = await compressImage(file);
+        setAttachments(prev => [...prev, {
+          type: 'image',
+          dataBase64,
+          mimeType: 'image/jpeg',
+          fileName: file.name,
+        }]);
+      } catch (err) {
+        console.error('Image compression failed:', err);
+      }
+    }
+    // 重置 input 以便再次选择同一文件
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isStreaming) return;
-    const content = inputValue.trim();
+    if ((!inputValue.trim() && attachments.length === 0) || isStreaming) return;
+    const content = inputValue.trim() || '请描述这张图片';
     setInputValue('');
+    const currentAttachments = attachments.length > 0 ? attachments : undefined;
+    setAttachments([]);
 
     if (!activeConversation) {
       await handleCreateConversation();
     }
 
     const config = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : undefined;
-    await sendMessage(content, config);
+    await sendMessage(content, currentAttachments, config);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -165,10 +198,10 @@ export function ChatPage() {
                 </Button>
               </div>
 
-              {/* 模型选择 */}
+              {/* 模型选择 - 扩展为包含 vision 类别 */}
               <div className="mb-3">
                 <ModelDropdown
-                  category={['text']}
+                  category={['text', 'vision']}
                   selectedModel={selectedTextModel}
                   onModelChange={(_modelId: string, _config: ModelConfig) => {
                     setSelectedTextModel(_config.model);
@@ -282,7 +315,7 @@ export function ChatPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         onClick={scrollToBottom}
-                        className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-primary text-primary-foreground shadow-lg 
+                        className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-primary text-primary-foreground shadow-lg
                                    flex items-center justify-center hover:bg-primary/90 transition-colors z-10"
                       >
                         <ArrowDown className="h-4 w-4" />
@@ -303,7 +336,49 @@ export function ChatPage() {
 
                 {/* 输入区域 */}
                 <div className="p-4 border-t">
+                  {/* 图片缩略图预览条 */}
+                  {attachments.length > 0 && (
+                    <div className="flex gap-2 mb-2 overflow-x-auto pb-1 chat-scrollbar">
+                      {attachments.map((att, index) => (
+                        <div key={index} className="relative shrink-0 group">
+                          <img
+                            src={base64ToDataUrl(att.dataBase64, att.mimeType)}
+                            alt={att.fileName}
+                            className="w-16 h-16 rounded-lg object-cover border border-border"
+                          />
+                          <button
+                            onClick={() => handleRemoveAttachment(index)}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground
+                                       flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex gap-2 items-end">
+                    {/* "+" 图片按钮 */}
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isStreaming}
+                      className="shrink-0"
+                      title="添加图片"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+
                     <Textarea
                       ref={textareaRef}
                       value={inputValue}
@@ -327,7 +402,7 @@ export function ChatPage() {
                       <Button
                         size="icon"
                         onClick={handleSendMessage}
-                        disabled={!inputValue.trim()}
+                        disabled={!inputValue.trim() && attachments.length === 0}
                         className="shrink-0"
                       >
                         <Send className="h-4 w-4" />
@@ -361,7 +436,30 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
-  // 自定义 ReactMarkdown 组件，将 SVG 代码块渲染为 SvgRenderer
+  // 图片预览状态
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
+
+  // 打开预览
+  const openPreview = useCallback((_src: string, images: string[], index: number) => {
+    setPreviewImages(images);
+    setPreviewInitialIndex(index);
+    setPreviewVisible(true);
+  }, []);
+
+  // 关闭预览
+  const closePreview = useCallback(() => {
+    setPreviewVisible(false);
+  }, []);
+
+  // 收集用户消息中的所有图片
+  const userImages = useMemo(() => {
+    if (!isUser || !message.attachments) return [];
+    return message.attachments.map(att => base64ToDataUrl(att.dataBase64, att.mimeType));
+  }, [isUser, message.attachments]);
+
+  // 自定义 ReactMarkdown 组件，将 SVG 代码块渲染为 SvgRenderer，图片可点击预览
   const markdownComponents = useCallback(() => ({
     code({ className, children, ...props }: any) {
       const isSvgBlock = className === 'language-svg' ||
@@ -370,7 +468,6 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
         const svgContent = typeof children === 'string' ? children : '';
         return <SvgRenderer svgContent={svgContent} />;
       }
-      // 默认代码块渲染
       return (
         <code className={className} {...props}>
           {children}
@@ -378,13 +475,26 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
       );
     },
     pre({ children }: any) {
-      // 检查 pre 标签内是否包含 SvgRenderer（即 SVG 代码块）
       if (children && typeof children === 'object' && 'type' in (children as any) && (children as any).type === SvgRenderer) {
         return children;
       }
       return <pre>{children}</pre>;
     },
-  }), []);
+    img({ src, alt }: any) {
+      if (!src) return null;
+      return (
+        <img
+          src={src}
+          alt={alt || ''}
+          className="rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border max-w-full h-auto my-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            openPreview(src, [src], 0);
+          }}
+        />
+      );
+    },
+  }), [openPreview]);
 
   if (isSystem) {
     return (
@@ -395,41 +505,75 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}
-    >
-      <div className={cn(
-        'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-        isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-      )}>
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-      </div>
-      <div className={cn(
-        'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-        isUser
-          ? 'bg-primary text-primary-foreground rounded-tr-sm'
-          : 'bg-muted rounded-tl-sm'
-      )}>
-        {isUser ? (
-          <p className="whitespace-pre-wrap">{message.content}</p>
-        ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            {message.content ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents()}
-              >
-                {message.content}
-              </ReactMarkdown>
-            ) : (
-              <span className="inline-block w-2 h-4 bg-foreground/50 animate-pulse" />
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}
+      >
+        <div className={cn(
+          'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+        )}>
+          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        </div>
+        <div className={cn(
+          'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+          isUser
+            ? 'bg-primary text-primary-foreground rounded-tr-sm'
+            : 'bg-muted rounded-tl-sm'
+        )}>
+          {/* 用户消息图片展示 */}
+          {isUser && message.attachments && message.attachments.length > 0 && (
+            <div className={cn(
+              'grid gap-1.5 mb-2',
+              message.attachments.length === 1 ? 'grid-cols-1' :
+              message.attachments.length === 2 ? 'grid-cols-2' :
+              message.attachments.length === 4 ? 'grid-cols-2' :
+              'grid-cols-3'
+            )}>
+              {message.attachments.map((att, i) => (
+                <img
+                  key={i}
+                  src={base64ToDataUrl(att.dataBase64, att.mimeType)}
+                  alt={att.fileName}
+                  className="rounded-lg w-full cursor-pointer hover:opacity-80 transition-opacity border border-white/20 object-cover aspect-square"
+                  onClick={() => openPreview(
+                    base64ToDataUrl(att.dataBase64, att.mimeType),
+                    userImages,
+                    i
+                  )}
+                />
+              ))}
+            </div>
+          )}
+          {isUser ? (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {message.content ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents()}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              ) : (
+                <span className="inline-block w-2 h-4 bg-foreground/50 animate-pulse" />
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* 图片放大预览 */}
+      <ImagePreview
+        visible={previewVisible}
+        images={previewImages}
+        initialIndex={previewInitialIndex}
+        onClose={closePreview}
+      />
+    </>
   );
 }

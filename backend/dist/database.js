@@ -184,6 +184,12 @@ function initDatabase(database) {
   `);
     database.run(`CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id)`);
     database.run(`CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)`);
+    // 兼容旧数据库：检查并添加 attachments 字段到 chat_messages
+    const msgColumnsResult = database.exec("PRAGMA table_info(chat_messages)");
+    const msgExistingColumns = msgColumnsResult[0]?.values?.map((row) => row[1]) || [];
+    if (!msgExistingColumns.includes('attachments')) {
+        database.run(`ALTER TABLE chat_messages ADD COLUMN attachments TEXT`);
+    }
     // 创建索引以提高搜索性能
     database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_status ON model_instances(status)`);
     database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_config_id ON model_instances(config_id)`);
@@ -282,9 +288,10 @@ async function saveModelConfig(config) {
         config.capabilities,
         config.is_active
     ]);
-    saveDatabase();
     const result = database.exec('SELECT last_insert_rowid() as id');
-    return result[0].values[0][0];
+    const id = result[0].values[0][0];
+    saveDatabase();
+    return id;
 }
 async function updateModelConfig(id, config) {
     const database = await getDatabase();
@@ -398,9 +405,10 @@ async function getConversationById(id) {
 async function createConversation(data) {
     const database = await getDatabase();
     database.run('INSERT INTO conversations (title, model_provider, model_name, system_prompt) VALUES (?, ?, ?, ?)', [data.title || '新对话', data.model_provider, data.model_name, data.system_prompt || null]);
-    saveDatabase();
     const result = database.exec('SELECT last_insert_rowid() as id');
-    return result[0].values[0][0];
+    const id = result[0].values[0][0];
+    saveDatabase();
+    return id;
 }
 async function updateConversation(id, data) {
     const database = await getDatabase();
@@ -454,12 +462,13 @@ async function getMessagesByConversationId(conversationId) {
 }
 async function createMessage(data) {
     const database = await getDatabase();
-    database.run('INSERT INTO chat_messages (conversation_id, role, content, token_usage) VALUES (?, ?, ?, ?)', [data.conversation_id, data.role, data.content, data.token_usage || 0]);
+    database.run('INSERT INTO chat_messages (conversation_id, role, content, token_usage, attachments) VALUES (?, ?, ?, ?, ?)', [data.conversation_id, data.role, data.content, data.token_usage || 0, data.attachments || null]);
     // 更新对话的 message_count 和 updated_at
     database.run('UPDATE conversations SET message_count = message_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [data.conversation_id]);
-    saveDatabase();
     const result = database.exec('SELECT last_insert_rowid() as id');
-    return result[0].values[0][0];
+    const id = result[0].values[0][0];
+    saveDatabase();
+    return id;
 }
 async function getMessageCount(conversationId) {
     const database = await getDatabase();

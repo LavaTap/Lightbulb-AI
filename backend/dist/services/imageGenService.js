@@ -89,14 +89,13 @@ async function generateImage(prompt, config, size = '1024x1024', referenceImage)
  * 生成阿里云 qwen-image 图片
  */
 async function generateQwenImage(prompt, config, size, referenceImage) {
-    // 映射尺寸
+    // 映射尺寸（仅当需要指定尺寸时使用）
     const sizeMap = {
         '1024x1024': '2048*2048', // 1:1
         '1024x1792': '1536*2688', // 9:16
         '1792x1024': '2688*1536', // 16:9
         '2560x1440': '2560*1440', // 2K 16:9
     };
-    const imageSize = sizeMap[size] || '2048*2048';
     // 构建消息内容
     const content = [];
     // 如果有参考图，添加到消息开头
@@ -110,7 +109,7 @@ async function generateQwenImage(prompt, config, size, referenceImage) {
     }
     // 添加文本提示词
     content.push({ type: 'text', text: prompt });
-    // 构建请求体
+    // 构建请求体 — 不传 size，优先按对话 prompt 中的尺寸要求
     const requestBody = {
         model: config.model,
         input: {
@@ -122,7 +121,6 @@ async function generateQwenImage(prompt, config, size, referenceImage) {
             ]
         },
         parameters: {
-            size: imageSize,
             n: 1,
             prompt_extend: referenceImage ? false : true, // 有参考图时禁用提示词扩展
             watermark: false

@@ -77,6 +77,12 @@ export const createConversationSchema = z.object({
 export const sendMessageSchema = z.object({
   content: z.string().min(1, '消息内容不能为空'),
   config: configSchema,
+  attachments: z.array(z.object({
+    type: z.string(),
+    dataBase64: z.string(),
+    mimeType: z.string(),
+    fileName: z.string(),
+  })).optional(),
 });
 
 export const updateConversationSchema = z.object({

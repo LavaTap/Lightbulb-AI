@@ -222,6 +222,22 @@ export declare const sendMessageSchema: z.ZodObject<{
         useProxy?: boolean | undefined;
         proxyEndpoint?: string | undefined;
     }>;
+    attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        type: z.ZodString;
+        dataBase64: z.ZodString;
+        mimeType: z.ZodString;
+        fileName: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        type: string;
+        dataBase64: string;
+        mimeType: string;
+        fileName: string;
+    }, {
+        type: string;
+        dataBase64: string;
+        mimeType: string;
+        fileName: string;
+    }>, "many">>;
 }, "strip", z.ZodTypeAny, {
     config: {
         provider: "custom" | "openai" | "google" | "deepseek" | "xfyun" | "aliyun" | "bytedance" | "baidu" | "tencent" | "gptimage2";
@@ -232,6 +248,12 @@ export declare const sendMessageSchema: z.ZodObject<{
         proxyEndpoint?: string | undefined;
     };
     content: string;
+    attachments?: {
+        type: string;
+        dataBase64: string;
+        mimeType: string;
+        fileName: string;
+    }[] | undefined;
 }, {
     config: {
         provider: "custom" | "openai" | "google" | "deepseek" | "xfyun" | "aliyun" | "bytedance" | "baidu" | "tencent" | "gptimage2";
@@ -242,6 +264,12 @@ export declare const sendMessageSchema: z.ZodObject<{
         proxyEndpoint?: string | undefined;
     };
     content: string;
+    attachments?: {
+        type: string;
+        dataBase64: string;
+        mimeType: string;
+        fileName: string;
+    }[] | undefined;
 }>;
 export declare const updateConversationSchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodString>;

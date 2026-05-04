@@ -176,6 +176,13 @@ function initDatabase(database: SqlJsDatabase): void {
   database.run(`CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id)`);
   database.run(`CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)`);
 
+  // 兼容旧数据库：检查并添加 attachments 字段到 chat_messages
+  const msgColumnsResult = database.exec("PRAGMA table_info(chat_messages)");
+  const msgExistingColumns = msgColumnsResult[0]?.values?.map((row: any[]) => row[1]) || [];
+  if (!msgExistingColumns.includes('attachments')) {
+    database.run(`ALTER TABLE chat_messages ADD COLUMN attachments TEXT`);
+  }
+
   // 创建索引以提高搜索性能
   database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_status ON model_instances(status)`);
   database.run(`CREATE INDEX IF NOT EXISTS idx_model_instances_config_id ON model_instances(config_id)`);
@@ -384,6 +391,7 @@ export interface ChatMessageRow {
   role: 'system' | 'user' | 'assistant';
   content: string;
   token_usage: number;
+  attachments: string | null;
   created_at: string;
 }
 
@@ -487,11 +495,12 @@ export async function createMessage(data: {
   role: 'system' | 'user' | 'assistant';
   content: string;
   token_usage?: number;
+  attachments?: string;
 }): Promise<number> {
   const database = await getDatabase();
   database.run(
-    'INSERT INTO chat_messages (conversation_id, role, content, token_usage) VALUES (?, ?, ?, ?)',
-    [data.conversation_id, data.role, data.content, data.token_usage || 0]
+    'INSERT INTO chat_messages (conversation_id, role, content, token_usage, attachments) VALUES (?, ?, ?, ?, ?)',
+    [data.conversation_id, data.role, data.content, data.token_usage || 0, data.attachments || null]
   );
 
   // 更新对话的 message_count 和 updated_at

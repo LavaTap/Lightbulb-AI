@@ -1,9 +1,20 @@
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
 import type { APIConfig } from '../types/index.js';
+
+export interface MultimodalContent {
+  type: 'image_url' | 'text';
+  image_url?: { url: string };
+  text?: string;
+}
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | MultimodalContent[];
+}
+
+function toOpenAIMessages(messages: ChatMessage[]): ChatCompletionMessageParam[] {
+  return messages.map(m => ({ role: m.role, content: m.content })) as ChatCompletionMessageParam[];
 }
 
 const PROVIDER_DEFAULT_ENDPOINTS: Record<string, string> = {
@@ -34,12 +45,16 @@ export async function chatCompletion(
 ): Promise<{ content: string; tokenUsage: number }> {
   console.log('========== Chat Completion ==========');
   console.log(`Model: ${config.model}, Messages: ${messages.length}`);
+  const attachmentCount = messages.filter(m => Array.isArray(m.content)).length;
+  if (attachmentCount > 0) {
+    console.log(`Multimodal messages: ${attachmentCount}`);
+  }
 
   const client = createOpenAIClient(config);
 
   const response = await client.chat.completions.create({
     model: config.model,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
+    messages: toOpenAIMessages(messages),
     max_tokens: options?.maxTokens || 2000,
     temperature: options?.temperature ?? 0.7,
   });
@@ -58,12 +73,16 @@ export async function* chatCompletionStream(
 ): AsyncGenerator<{ delta: string | null; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
   console.log('========== Chat Completion Stream ==========');
   console.log(`Model: ${config.model}, Messages: ${messages.length}`);
+  const attachmentCount = messages.filter(m => Array.isArray(m.content)).length;
+  if (attachmentCount > 0) {
+    console.log(`Multimodal messages: ${attachmentCount}`);
+  }
 
   const client = createOpenAIClient(config);
 
   const stream = await client.chat.completions.create({
     model: config.model,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
+    messages: toOpenAIMessages(messages),
     max_tokens: options?.maxTokens || 4000,
     temperature: options?.temperature ?? 0.7,
     stream: true,

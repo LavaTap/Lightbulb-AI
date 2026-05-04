@@ -1,4 +1,4 @@
-import type { APIConfig, VisionAnalysisResult, ModelConfig, ModelCategory, Conversation, ChatMessage } from './index';
+import type { APIConfig, VisionAnalysisResult, ModelConfig, ModelCategory, Conversation, ChatMessage, MessageAttachment } from './index';
 
 export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
@@ -121,6 +121,7 @@ export interface CreateConversationRequest {
 export interface SendMessageRequest {
   content: string;
   config: APIConfig;
+  attachments?: MessageAttachment[];
 }
 
 export interface ConversationsResponse {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { chatApi } from '@/services/api';
 import { useApiConfig } from './useApiConfig';
-import type { Conversation, ChatMessage, APIConfig } from '@/types/index';
+import type { Conversation, ChatMessage, MessageAttachment, APIConfig } from '@/types/index';
 
 export function useChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -97,7 +97,7 @@ export function useChat() {
     }
   }, [activeConversation, loadConversations]);
 
-  const sendMessage = useCallback(async (content: string, overrideConfig?: APIConfig) => {
+  const sendMessage = useCallback(async (content: string, attachments?: MessageAttachment[], overrideConfig?: APIConfig) => {
     if (!activeConversation) return;
 
     const config = overrideConfig || getChatApiConfig();
@@ -118,6 +118,7 @@ export function useChat() {
       conversationId: activeConversation.id,
       role: 'user',
       content,
+      attachments,
       tokenUsage: 0,
       createdAt: new Date().toISOString(),
     };
@@ -135,7 +136,7 @@ export function useChat() {
     setMessages(prev => [...prev, assistantPlaceholder]);
 
     try {
-      const response = await chatApi.sendMessage(activeConversation.id, content, config);
+      const response = await chatApi.sendMessage(activeConversation.id, content, config, attachments);
 
       if (!response.ok || !response.body) throw new Error('Stream failed');
 
