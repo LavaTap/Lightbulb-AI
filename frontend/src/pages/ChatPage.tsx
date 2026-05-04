@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
-import { modelConfigToApiConfig } from '@/lib/model-utils';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType, ModelConfig } from '@/types/index';
 
@@ -27,16 +27,30 @@ export function ChatPage() {
     clearError,
   } = useChat();
 
-  const { getConfigsByCategory } = useApiConfig();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
   const [inputValue, setInputValue] = useState('');
   const [selectedTextModel, setSelectedTextModel] = useState<string>('');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const initRef = useRef(false);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // 自动初始化选中的模型
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const textConfigs = getConfigsByCategory('text');
+    if (textConfigs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('chat');
+    const match = persistedId ? textConfigs.find(c => c.id.toString() === persistedId) : null;
+    const config = match || textConfigs[0];
+    setSelectedTextModel(config.model);
+    setSelectedModelConfig(config);
+  }, [modelConfigs, getConfigsByCategory]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -129,6 +143,7 @@ export function ChatPage() {
                   onModelChange={(_modelId: string, _config: ModelConfig) => {
                     setSelectedTextModel(_config.model);
                     setSelectedModelConfig(_config);
+                    setPersistedModelId('chat', _config.id.toString());
                   }}
                 />
               </div>
@@ -183,7 +198,7 @@ export function ChatPage() {
                 <div className="px-4 py-3 border-b flex items-center justify-between">
                   <h2 className="font-medium truncate">{activeConversation.title}</h2>
                   <span className="text-xs text-muted-foreground">
-                    {activeConversation.modelName}
+                    {selectedModelConfig?.model || activeConversation.modelName}
                   </span>
                 </div>
 

@@ -16,7 +16,18 @@
       "Bash(node test-hunyuan.js)",
       "Bash(npx vite *)",
       "Bash(C:/Users/shen3/AppData/Local/Programs/Python/Python312/python.exe *)",
+<<<<<<< Updated upstream
       "Bash(powershell.exe -Command \"[Environment]::GetEnvironmentVariable\\('Path', 'User'\\)\")"
+=======
+      "Bash(powershell.exe -Command \"[Environment]::GetEnvironmentVariable\\('Path', 'User'\\)\")",
+      "Bash(npm list *)",
+      "Bash(git -C /d/code/workspace/lightbulb-AI log --oneline)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(d\\);j.data.forEach\\(c=>console.log\\('id='+c.id+' provider='+c.provider+' model='+c.model+' category='+JSON.stringify\\(c.category\\)\\)\\)\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);console.log\\(JSON.stringify\\(JSON.parse\\(d\\),null,2\\)\\)\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(d\\);console.log\\('apiKey:',j.data.apiKey?j.data.apiKey.slice\\(0,8\\)+'...':'EMPTY'\\);console.log\\('endpoint:',j.data.endpoint\\)\")",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(git clone *)"
+>>>>>>> Stashed changes
     ]
   }
 }

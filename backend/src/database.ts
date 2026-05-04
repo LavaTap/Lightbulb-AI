@@ -297,10 +297,11 @@ export async function saveModelConfig(config: Omit<ModelConfigRow, 'id' | 'creat
     config.capabilities,
     config.is_active
   ]);
-  saveDatabase();
-  
+
   const result = database.exec('SELECT last_insert_rowid() as id');
-  return result[0].values[0][0] as number;
+  const id = result[0].values[0][0] as number;
+  saveDatabase();
+  return id;
 }
 
 export async function updateModelConfig(id: number, config: Partial<ModelConfigRow>): Promise<void> {
@@ -433,10 +434,11 @@ export async function createConversation(data: {
     'INSERT INTO conversations (title, model_provider, model_name, system_prompt) VALUES (?, ?, ?, ?)',
     [data.title || '新对话', data.model_provider, data.model_name, data.system_prompt || null]
   );
-  saveDatabase();
 
   const result = database.exec('SELECT last_insert_rowid() as id');
-  return result[0].values[0][0] as number;
+  const id = result[0].values[0][0] as number;
+  saveDatabase();
+  return id;
 }
 
 export async function updateConversation(id: number, data: Partial<Pick<ConversationRow, 'title' | 'system_prompt' | 'summary' | 'summary_updated_at' | 'message_count' | 'is_archived'>>): Promise<void> {
@@ -498,10 +500,10 @@ export async function createMessage(data: {
     [data.conversation_id]
   );
 
-  saveDatabase();
-
   const result = database.exec('SELECT last_insert_rowid() as id');
-  return result[0].values[0][0] as number;
+  const id = result[0].values[0][0] as number;
+  saveDatabase();
+  return id;
 }
 
 export async function getMessageCount(conversationId: number): Promise<number> {

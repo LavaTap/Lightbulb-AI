@@ -6,10 +6,19 @@ export interface ChatMessage {
   content: string;
 }
 
+const PROVIDER_DEFAULT_ENDPOINTS: Record<string, string> = {
+  deepseek: 'https://api.deepseek.com/v1',
+  google: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  xfyun: 'https://spark-api-open.xf-yun.com/v1',
+  bytedance: 'https://ark.cn-beijing.volces.com/api/v3',
+  baidu: 'https://qianfan.baidubce.com/v2',
+};
+
 function createOpenAIClient(config: APIConfig): OpenAI {
   const baseURL = config.useProxy && config.proxyEndpoint
     ? config.proxyEndpoint
-    : config.endpoint || undefined;
+    : config.endpoint || PROVIDER_DEFAULT_ENDPOINTS[config.provider] || undefined;
 
   return new OpenAI({
     apiKey: config.apiKey,
