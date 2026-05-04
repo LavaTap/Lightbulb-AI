@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Plus, Trash2, Send, Square, Bot, User } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ModelDropdown } from '@/components/ModelDropdown';
+import { SvgRenderer } from '@/components/SvgRenderer';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
@@ -32,8 +36,12 @@ export function ChatPage() {
   const [selectedTextModel, setSelectedTextModel] = useState<string>('');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initRef = useRef(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -52,10 +60,26 @@ export function ChatPage() {
     setSelectedModelConfig(config);
   }, [modelConfigs, getConfigsByCategory]);
 
-  // 自动滚动到底部
+  // 自动滚动到底部（仅在用户处于底部附近时）
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
+
+  // 监听消息容器滚动，控制下拉按钮显隐
+  const handleMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const threshold = 100;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollButton(!nearBottom && el.scrollHeight > el.clientHeight + 200);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleCreateConversation = async () => {
     const textConfigs = getConfigsByCategory('text');
@@ -111,12 +135,19 @@ export function ChatPage() {
         <p className="text-muted-foreground">与 AI 进行智能对话，支持长期记忆</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
         {/* 左侧：对话列表 */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-3"
+          animate={{
+            opacity: sidebarCollapsed ? 0 : 1,
+            x: sidebarCollapsed ? -40 : 0,
+            width: sidebarCollapsed ? 0 : 'auto',
+          }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className={cn(
+            sidebarCollapsed ? 'overflow-hidden invisible lg:col-span-0' : 'lg:col-span-3'
+          )}
         >
           <Card className="h-full flex flex-col">
             <CardContent className="p-3 flex-1 flex flex-col overflow-hidden">
@@ -149,7 +180,7 @@ export function ChatPage() {
               </div>
 
               {/* 对话列表 */}
-              <div className="flex-1 overflow-y-auto space-y-1">
+              <div className="flex-1 overflow-y-auto space-y-1 chat-scrollbar">
                 {conversations.length === 0 ? (
                   <div className="text-center text-muted-foreground text-sm py-8">
                     暂无对话
@@ -185,11 +216,34 @@ export function ChatPage() {
           </Card>
         </motion.div>
 
+        {/* 收纳切换按钮 */}
+        <motion.button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className={cn(
+            'absolute left-0 top-1/2 -translate-y-1/2 z-20 w-6 h-12 rounded-r-lg flex items-center justify-center transition-colors',
+            'bg-white dark:bg-gray-800 border border-l-0 border-gray-200 dark:border-gray-700 shadow-sm',
+            'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary'
+          )}
+          title={sidebarCollapsed ? '展开对话列表' : '收起对话列表'}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeft className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
+        </motion.button>
+
         {/* 右侧：消息区域 */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-9"
+          animate={{
+            opacity: 1,
+            x: 0,
+          }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className={cn(
+            sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-9'
+          )}
         >
           <Card className="h-full flex flex-col">
             {activeConversation ? (
@@ -203,7 +257,11 @@ export function ChatPage() {
                 </div>
 
                 {/* 消息列表 */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleMessagesScroll}
+                  className="flex-1 overflow-y-scroll p-4 space-y-4 relative chat-scrollbar"
+                >
                   <AnimatePresence>
                     {messages.map((msg, index) => (
                       <MessageBubble key={`${msg.id}-${index}`} message={msg} />
@@ -216,6 +274,22 @@ export function ChatPage() {
                   )}
 
                   <div ref={messagesEndRef} />
+
+                  {/* 下拉滑纽：滚动到底部 */}
+                  <AnimatePresence>
+                    {showScrollButton && (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        onClick={scrollToBottom}
+                        className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-primary text-primary-foreground shadow-lg 
+                                   flex items-center justify-center hover:bg-primary/90 transition-colors z-10"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* 错误提示 */}
@@ -237,8 +311,8 @@ export function ChatPage() {
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
-                      className="min-h-[40px] max-h-[200px] resize-none"
-                      rows={1}
+                      minRows={1}
+                      maxRows={8}
                       disabled={isStreaming}
                     />
                     {isStreaming ? (
@@ -318,13 +392,10 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-            {message.content || (
-              <span className="inline-block w-2 h-4 bg-foreground/50 animate-pulse" />
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            {message.content ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            ) : (
+              <span className="inline-block w-2 h-4 

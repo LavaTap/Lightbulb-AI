@@ -21,22 +21,95 @@ body {
   @apply transition-colors duration-200;
 }
 
-/* Scrollbar styling */
+/* Global scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  background: #d1d5db;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-500;
+  background: #9ca3af;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Chat message area visible scrollbar */
+.chat-scrollbar {
+  scrollbar-gutter: stable;
+  /* Firefox: always show scrollbar */
+  scrollbar-width: auto;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+  /* 确保容器有高度限制，否则滚动条不会出现 */
+  max-height: 100%;
+  overflow-y: scroll !important;
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+  margin: 4px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid #f1f5f9;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  background-clip: padding-box;
+}
+
+/* Dark mode */
+.dark .chat-scrollbar {
+  scrollbar-color: #475569 #1e293b;
+}
+
+.dark .chat-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.dark .chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border: 2px solid #1e293b;
+  background-clip: padding-box;
+}
+
+.dark .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+  border: 2px solid #1e293b;
+  background-clip: padding-box;
+}
+
+/* 强制为聊天消息容器设置高度限制 */
+.flex-1.overflow-y-scroll.chat-scrollbar {
+  max-height: calc(100vh - 300px) !important;
+  height: auto !important;
 }
 
 /* Glass effect */
@@ -51,4 +124,48 @@ body {
 
 .dark .gradient-text {
   @apply from-blue-400 to-cyan-400;
+}
+
+/* 美化 Textarea 的拖曳调整大小手柄 */
+textarea {
+  resize: vertical;
+}
+
+textarea::-webkit-resizer {
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #7c3aed 40%, #7c3aed 50%, transparent 50%, transparent 60%, #7c3aed 60%, #7c3aed 70%, transparent 70%, transparent 80%, #7c3aed 80%, #7c3aed 90%, transparent 90%);
+  border-radius: 6px;
+  border: 2px solid #ede9fe;
+  background-size: 100% 100%;
+  background-color: #f5f3ff;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+}
+
+textarea::-webkit-resizer:hover {
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #6d28d9 40%, #6d28d9 50%, transparent 50%, transparent 60%, #6d28d9 60%, #6d28d9 70%, transparent 70%, transparent 80%, #6d28d9 80%, #6d28d9 90%, transparent 90%);
+  background-color: #ede9fe;
+  border-color: #ddd6fe;
+}
+
+.dark textarea::-webkit-resizer {
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #a78bfa 40%, #a78bfa 50%, transparent 50%, transparent 60%, #a78bfa 60%, #a78bfa 70%, transparent 70%, transparent 80%, #a78bfa 80%, #a78bfa 90%, transparent 90%);
+  border: 2px solid #4c1d95;
+  background-color: #2e1065;
+}
+
+.dark textarea::-webkit-resizer:hover {
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #c4b5fd 40%, #c4b5fd 50%, transparent 50%, transparent 60%, #c4b5fd 60%, #c4b5fd 70%, transparent 70%, transparent 80%, #c4b5fd 80%, #c4b5fd 90%, transparent 90%);
+  background-color: #3b0764;
+  border-color: #6d28d9;
+}
+
+/* Firefox 的拖曳调整大小手柄 */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark textarea {
+  scrollbar-color: #475569 transparent;
 }
