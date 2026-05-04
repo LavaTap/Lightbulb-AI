@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -362,6 +361,31 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
+  // 自定义 ReactMarkdown 组件，将 SVG 代码块渲染为 SvgRenderer
+  const markdownComponents = useCallback(() => ({
+    code({ className, children, ...props }: any) {
+      const isSvgBlock = className === 'language-svg' ||
+        (typeof children === 'string' && children.trim().startsWith('<svg'));
+      if (isSvgBlock) {
+        const svgContent = typeof children === 'string' ? children : '';
+        return <SvgRenderer svgContent={svgContent} />;
+      }
+      // 默认代码块渲染
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    pre({ children }: any) {
+      // 检查 pre 标签内是否包含 SvgRenderer（即 SVG 代码块）
+      if (children && typeof children === 'object' && 'type' in (children as any) && (children as any).type === SvgRenderer) {
+        return children;
+      }
+      return <pre>{children}</pre>;
+    },
+  }), []);
+
   if (isSystem) {
     return (
       <div className="text-center text-xs text-muted-foreground py-2">
@@ -394,8 +418,18 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             {message.content ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents()}
+              >
                 {message.content}
               </ReactMarkdown>
             ) : (
-              <span className="inline-block w-2 h-4 
+              <span className="inline-block w-2 h-4 bg-foreground/50 animate-pulse" />
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
