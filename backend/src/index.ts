@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { createApp } from './app.js';
 import { getDatabase, closeDatabase } from './database.js';
-import { initChroma } from './services/chromaService.js';
+import { initLance } from './services/lanceService.js';
 
 dotenv.config();
 
@@ -13,11 +13,11 @@ async function start() {
   // Initialize database on startup
   await getDatabase();
 
-  // Initialize ChromaDB (optional - graceful degradation)
+  // Initialize LanceDB (optional - graceful degradation)
   try {
-    await initChroma();
+    await initLance();
   } catch (e) {
-    console.warn('ChromaDB not available, chat memory features disabled');
+    console.warn('LanceDB not available, chat memory features disabled');
   }
   
   const server = app.listen(PORT, () => {

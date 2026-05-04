@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { createConversationSchema, sendMessageSchema, updateConversationSchema } from '../middleware/validateRequest.js';
 import { chatCompletionStream, type ChatMessage } from '../services/chatService.js';
 import { getRelevantMemories, maybeSummarizeConversation, deleteConversationMemories, generateConversationTitle } from '../services/memoryService.js';
-import { isChromaAvailable } from '../services/chromaService.js';
+import { isLanceAvailable } from '../services/lanceService.js';
 import {
   getAllConversations,
   getConversationById,
@@ -189,9 +189,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     // 构建系统提示
     let systemPrompt = conversation.system_prompt || '你是一个有帮助的 AI 助手。';
 
-    // 如果 ChromaDB 可用，检索相关记忆注入
-    if (isChromaAvailable()) {
-      const memoryContext = await getRelevantMemories(data.content, config, conversationId);
+    // 如果 LanceDB 可用，检索相关记忆注入（跨对话检索，不限定当前对话）
+    if (isLanceAvailable()) {
+      const memoryContext = await getRelevantMemories(data.content, config);
       if (memoryContext) {
         systemPrompt += '\n\n' + memoryContext;
       }

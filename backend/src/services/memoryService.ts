@@ -1,6 +1,6 @@
 import type { APIConfig } from '../types/index.js';
 import { chatCompletion, type ChatMessage } from './chatService.js';
-import { isChromaAvailable, storeMemory, retrieveMemories, deleteConversationMemories } from './chromaService.js';
+import { isLanceAvailable, storeMemory, retrieveMemories, deleteConversationMemories } from './lanceService.js';
 import { getConversationById, getMessagesByConversationId, updateConversation } from '../database.js';
 
 const SUMMARY_THRESHOLD = 20;
@@ -23,7 +23,7 @@ export async function maybeSummarizeConversation(
   conversationId: number,
   config: APIConfig
 ): Promise<void> {
-  if (!isChromaAvailable()) return;
+  if (!isLanceAvailable()) return;
 
   try {
     const conversation = await getConversationById(conversationId);
@@ -70,12 +70,11 @@ export async function maybeSummarizeConversation(
       summary_updated_at: new Date().toISOString(),
     });
 
-    // 存储摘要到 ChromaDB
+    // 存储摘要到 LanceDB（不传 config，让嵌入服务自动选择支持嵌入的 provider）
     await storeMemory({
       conversationId,
       content: summaryResult.content,
       type: 'summary',
-      config,
     });
 
     // 提取关键事实
@@ -85,17 +84,17 @@ export async function maybeSummarizeConversation(
   }
 }
 
-let chromaUnavailableLogged = false;
+let lanceUnavailableLogged = false;
 
 export async function getRelevantMemories(
   userMessage: string,
   config: APIConfig,
   conversationId?: number
 ): Promise<string | null> {
-  if (!isChromaAvailable()) {
-    if (!chromaUnavailableLogged) {
-      console.info('[MemoryService] ChromaDB not available, chat memory disabled. Start ChromaDB to enable.');
-      chromaUnavailableLogged = true;
+  if (!isLanceAvailable()) {
+    if (!lanceUnavailableLogged) {
+      console.info('[MemoryService] LanceDB not available, chat memory disabled.');
+      lanceUnavailableLogged = true;
     }
     return null;
   }
@@ -105,7 +104,6 @@ export async function getRelevantMemories(
       query: userMessage,
       nResults: 5,
       conversationId,
-      config,
     });
 
     // 过滤距离过大的结果（cosine distance < 1.5）
@@ -128,7 +126,7 @@ export async function extractAndStoreFacts(
   config: APIConfig,
   messages?: ChatMessage[]
 ): Promise<void> {
-  if (!isChromaAvailable()) return;
+  if (!isLanceAvailable()) return;
 
   try {
     if (!messages) {
@@ -154,13 +152,12 @@ export async function extractAndStoreFacts(
       .map(line => line.replace(/^[-•*]\s*/, '').trim())
       .filter(line => line.length > 5);
 
-    // 批量存储事实
+    // 批量存储事实（不传 config，让嵌入服务自动选择支持嵌入的 provider）
     for (const fact of facts.slice(0, 10)) {
       await storeMemory({
         conversationId,
         content: fact,
         type: 'fact',
-        config,
       });
     }
 
