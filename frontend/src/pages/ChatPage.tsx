@@ -1,18 +1,24 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft, ImagePlus, X } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Send, Square, Bot, User, ArrowDown, PanelLeftClose, PanelLeft, ImagePlus, Paperclip, File, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { SvgRenderer } from '@/components/SvgRenderer';
 import { ImagePreview } from '@/components/ImagePreview';
 import { useChat } from '@/hooks/useChat';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
-import { compressImage, cn, base64ToDataUrl } from '@/lib/utils';
+import { compressImage, cn, base64ToDataUrl, fileToBase64, formatFileSize } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType, ModelConfig, MessageAttachment } from '@/types/index';
 
 export function ChatPage() {
@@ -39,6 +45,7 @@ export function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef2 = useRef<HTMLInputElement>(null);
   const initRef = useRef(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isNearBottomRef = useRef(true);
@@ -122,13 +129,36 @@ export function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleFileSelect2 = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      try {
+        // 读取文件为 base64
+        const base64 = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          type: 'file',
+          dataBase64: base64,
+          mimeType: file.type || 'application/octet-stream',
+          fileName: file.name,
+          fileSize: file.size,
+        }]);
+      } catch (err) {
+        console.error('File read failed:', err);
+      }
+    }
+    if (fileInputRef2.current) fileInputRef2.current.value = '';
+  };
+
   const handleRemoveAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && attachments.length === 0) || isStreaming) return;
-    const content = inputValue.trim() || '请描述这张图片';
+    const hasImageAttachments = attachments.some(a => a.type === 'image');
+    const content = inputValue.trim() || (hasImageAttachments ? '请描述这张图片' : '请查看附件');
     setInputValue('');
     const currentAttachments = attachments.length > 0 ? attachments : undefined;
     setAttachments([]);
@@ -306,22 +336,6 @@ export function ChatPage() {
                   )}
 
                   <div ref={messagesEndRef} />
-
-                  {/* 下拉滑纽：滚动到底部 */}
-                  <AnimatePresence>
-                    {showScrollButton && (
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={scrollToBottom}
-                        className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-primary text-primary-foreground shadow-lg
-                                   flex items-center justify-center hover:bg-primary/90 transition-colors z-10"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
                 </div>
 
                 {/* 错误提示 */}
@@ -334,22 +348,58 @@ export function ChatPage() {
                   </div>
                 )}
 
+                {/* 下拉滑纽：滚动到底部 */}
+                <AnimatePresence>
+                  {showScrollButton && (
+                    <motion.button
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      onClick={scrollToBottom}
+                      className="w-full py-2 flex items-center justify-center gap-2 text-xs text-primary bg-primary/5 hover:bg-primary/10 transition-colors border-t cursor-pointer"
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                      滚动到最新消息
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
                 {/* 输入区域 */}
                 <div className="p-4 border-t">
-                  {/* 图片缩略图预览条 */}
+                  {/* 附件预览条 */}
                   {attachments.length > 0 && (
-                    <div className="flex gap-2 mb-2 overflow-x-auto pb-1 chat-scrollbar">
+                    <div className="flex gap-2.5 mb-3 overflow-x-auto pb-1 chat-scrollbar">
                       {attachments.map((att, index) => (
                         <div key={index} className="relative shrink-0 group">
-                          <img
-                            src={base64ToDataUrl(att.dataBase64, att.mimeType)}
-                            alt={att.fileName}
-                            className="w-16 h-16 rounded-lg object-cover border border-border"
-                          />
+                          {att.type === 'image' ? (
+                            <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-border/50 group-hover:border-primary/40 transition-colors">
+                              <img
+                                src={base64ToDataUrl(att.dataBase64, att.mimeType)}
+                                alt={att.fileName}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 py-1">
+                                <p className="text-[10px] text-white truncate leading-tight">{att.fileName}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-44 rounded-xl border-2 border-border/50 bg-card hover:border-primary/40 transition-colors flex items-center gap-2.5 p-2.5">
+                              <div className="shrink-0 w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                                <File className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{att.fileName}</p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  {att.fileSize ? formatFileSize(att.fileSize) : '未知大小'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
                           <button
                             onClick={() => handleRemoveAttachment(index)}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground
-                                       flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-background border border-border shadow-sm
+                                       flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
+                                       hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -359,23 +409,43 @@ export function ChatPage() {
                   )}
 
                   <div className="flex gap-2 items-end">
-                    {/* "+" 图片按钮 */}
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isStreaming}
-                      className="shrink-0"
-                      title="添加图片"
-                    >
-                      <ImagePlus className="h-4 w-4" />
-                    </Button>
+                    {/* 统一附件上传按钮（下拉菜单） */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={isStreaming}
+                          className="shrink-0"
+                          title="添加附件"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" side="top" className="min-w-[140px]">
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <ImagePlus className="h-4 w-4 mr-2" />
+                          图片
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => fileInputRef2.current?.click()}>
+                          <Paperclip className="h-4 w-4 mr-2" />
+                          文件
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       multiple
                       onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <input
+                      ref={fileInputRef2}
+                      type="file"
+                      multiple
+                      onChange={handleFileSelect2}
                       className="hidden"
                     />
 
@@ -524,27 +594,37 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
             ? 'bg-primary text-primary-foreground rounded-tr-sm'
             : 'bg-muted rounded-tl-sm'
         )}>
-          {/* 用户消息图片展示 */}
+          {/* 用户消息附件展示 */}
           {isUser && message.attachments && message.attachments.length > 0 && (
-            <div className={cn(
-              'grid gap-1.5 mb-2',
-              message.attachments.length === 1 ? 'grid-cols-1' :
-              message.attachments.length === 2 ? 'grid-cols-2' :
-              message.attachments.length === 4 ? 'grid-cols-2' :
-              'grid-cols-3'
-            )}>
+            <div className="flex flex-wrap gap-2 mb-2">
               {message.attachments.map((att, i) => (
-                <img
-                  key={i}
-                  src={base64ToDataUrl(att.dataBase64, att.mimeType)}
-                  alt={att.fileName}
-                  className="rounded-lg w-full cursor-pointer hover:opacity-80 transition-opacity border border-white/20 object-cover aspect-square"
-                  onClick={() => openPreview(
-                    base64ToDataUrl(att.dataBase64, att.mimeType),
-                    userImages,
-                    i
-                  )}
-                />
+                att.type === 'image' ? (
+                  <img
+                    key={i}
+                    src={base64ToDataUrl(att.dataBase64, att.mimeType)}
+                    alt={att.fileName}
+                    className="rounded-lg w-24 h-24 cursor-pointer hover:opacity-80 transition-opacity border border-white/20 object-cover"
+                    onClick={() => openPreview(
+                      base64ToDataUrl(att.dataBase64, att.mimeType),
+                      userImages,
+                      i
+                    )}
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/20 min-w-0 max-w-[200px]"
+                    title={att.fileName}
+                  >
+                    <File className="h-4 w-4 shrink-0 text-white/70" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium truncate">{att.fileName}</p>
+                      {att.fileSize && (
+                        <p className="text-[10px] text-white/60">{formatFileSize(att.fileSize)}</p>
+                      )}
+                    </div>
+                  </div>
+                )
               ))}
             </div>
           )}

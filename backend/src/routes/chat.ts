@@ -4,6 +4,8 @@ import { createConversationSchema, sendMessageSchema, updateConversationSchema }
 import { chatCompletionStream, type ChatMessage, type MultimodalContent } from '../services/chatService.js';
 import { getRelevantMemories, maybeSummarizeConversation, deleteConversationMemories, generateConversationTitle } from '../services/memoryService.js';
 import { isLanceAvailable } from '../services/lanceService.js';
+import { parseFileContent } from '../services/fileParser.js';
+import { enrichMessageWithUrls } from '../services/webFetcher.js';
 import {
   getAllConversations,
   getConversationById,
@@ -191,35 +193,66 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       attachments: attachmentsJson,
     });
 
-    // 加载历史消息
+    // 加载历史消息（异步解析文件附件）
     const dbMessages = await getMessagesByConversationId(conversationId);
-    const historyMessages: ChatMessage[] = dbMessages
-      .slice(-50)
-      .map(m => {
-        // 如果消息有附件，构建多模态格式
+    const recentMessages = dbMessages.slice(-50);
+    const historyMessages: ChatMessage[] = await Promise.all(
+      recentMessages.map(async (m) => {
         let content: string | MultimodalContent[] = m.content;
         if (m.attachments) {
           try {
             const attachments = JSON.parse(m.attachments);
             if (Array.isArray(attachments) && attachments.length > 0) {
               const multimodalContent: MultimodalContent[] = [];
+              let fileTextContent = '';
+
               for (const att of attachments) {
                 if (att.type === 'image' && att.dataBase64) {
                   multimodalContent.push({
                     type: 'image_url',
                     image_url: { url: `data:${att.mimeType};base64,${att.dataBase64}` },
                   });
+                } else if (att.type === 'file' && att.dataBase64) {
+                  const buffer = Buffer.from(att.dataBase64, 'base64');
+                  const result = await parseFileContent(buffer, att.fileName || '', att.mimeType);
+                  if (result.success && result.text) {
+                    fileTextContent += `\n--- 附件: ${att.fileName} ---\n${result.text}\n--- 附件结束 ---\n`;
+                  } else {
+                    fileTextContent += `\n[附件: ${att.fileName} (${result.error || '无法解析'})]\n`;
+                  }
                 }
               }
-              multimodalContent.push({ type: 'text', text: m.content });
-              content = multimodalContent;
+
+              if (multimodalContent.length > 0) {
+                multimodalContent.push({
+                  type: 'text',
+                  text: m.content + (fileTextContent || ''),
+                });
+                content = multimodalContent;
+              } else if (fileTextContent) {
+                content = m.content + fileTextContent;
+              }
             }
           } catch {
             // 解析失败，保持纯文本
           }
         }
         return { role: m.role, content };
-      });
+      })
+    );
+
+    // 自动抓取消息中的 URL 网页内容，注入 AI 上下文
+    const lastUserMsg = [...historyMessages].reverse().find(m => m.role === 'user');
+    if (lastUserMsg && typeof lastUserMsg.content === 'string') {
+      try {
+        const { enrichedContent } = await enrichMessageWithUrls(lastUserMsg.content);
+        if (enrichedContent !== lastUserMsg.content) {
+          lastUserMsg.content = enrichedContent;
+        }
+      } catch (err) {
+        console.warn('[ChatRoute] URL enrichment failed:', err);
+      }
+    }
 
     // 构建系统提示
     let systemPrompt = conversation.system_prompt || '你是一个有帮助的 AI 助手。';
@@ -285,7 +318,71 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
     } catch (streamError) {
       console.error('[ChatRoute] Stream error:', streamError);
-      res.write(`event: error\ndata: ${JSON.stringify({ error: extractErrorMessage(streamError) })}\n\n`);
+
+      // 检测是否为模型不支持多模态内容（图片/视频）的错误
+      const errMsg = extractErrorMessage(streamError);
+      const status = (streamError as any)?.status;
+      const isMultimodalError = (
+        status === 400 &&
+        (errMsg.includes('image_url') || errMsg.includes('multimodal') || errMsg.includes('image input') || errMsg.includes('vision'))
+      );
+
+      // 检测是否为纯图片/非对话模型（如图像生成模型被误用于聊天）
+      const isModelMismatchError = (
+        status === 404 || status === 400
+      );
+
+      if (isMultimodalError) {
+        // 发送警告事件告知前端当前模型不支持图片
+        const warningMsg = '当前模型不支持读取图片内容，已移除图片附件，仅发送文字继续对话。';
+        res.write(`event: warning\ndata: ${JSON.stringify({ warning: warningMsg, type: 'multimodal_not_supported' })}\n\n`);
+
+        // 剥离所有历史消息中的附件，仅保留文本重试
+        const textOnlyMessages: ChatMessage[] = messages.map(m => ({
+          ...m,
+          content: typeof m.content === 'string' ? m.content : m.content.filter(c => c.type === 'text').map(c => c.text).join(' ') || '',
+        }));
+
+        try {
+          const retryStream = chatCompletionStream(textOnlyMessages, config);
+          for await (const chunk of retryStream) {
+            if (chunk.delta) {
+              fullContent += chunk.delta;
+              res.write(`event: delta\ndata: ${JSON.stringify({ content: chunk.delta })}\n\n`);
+            }
+            if (chunk.usage) {
+              totalTokenUsage = chunk.usage.totalTokens;
+              res.write(`event: usage\ndata: ${JSON.stringify(chunk.usage)}\n\n`);
+            }
+          }
+
+          const messageId = await createMessage({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: fullContent,
+            token_usage: totalTokenUsage,
+          });
+
+          res.write(`event: message_end\ndata: ${JSON.stringify({ messageId, tokenUsage: totalTokenUsage })}\n\n`);
+
+          maybeSummarizeConversation(conversationId, config).catch(err => {
+            console.warn('[ChatRoute] Background summarization failed:', err);
+          });
+
+          generateConversationTitle(conversationId, config).catch(err => {
+            console.warn('[ChatRoute] Title generation failed:', err);
+          });
+        } catch (retryError) {
+          console.error('[ChatRoute] Retry stream error:', retryError);
+          res.write(`event: error\ndata: ${JSON.stringify({ error: extractErrorMessage(retryError) })}\n\n`);
+        }
+      } else if (isModelMismatchError && errMsg.includes('page not found')) {
+        // 纯图片/图像生成模型被用于对话（如 hy-image-v3.0）
+        const warningMsg = `当前选择的模型（${config.model}）是图像生成模型，不支持文字对话，请切换到文本模型。`;
+        res.write(`event: error\ndata: ${JSON.stringify({ error: warningMsg })}\n\n`);
+      } else {
+        res.write(`event: error\ndata: ${JSON.stringify({ error: errMsg })}\n\n`);
+      }
     }
 
     res.end();

@@ -145,6 +145,7 @@ export function useChat() {
       let buffer = '';
       let fullContent = '';
       let tokenUsage = 0;
+      let multimodalWarningShown = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -169,7 +170,23 @@ export function useChat() {
           try {
             const data = JSON.parse(dataStr);
 
-            if (eventType === 'delta' && data.content) {
+            if (eventType === 'warning' && data.type === 'multimodal_not_supported') {
+              multimodalWarningShown = true;
+              // 更新用户消息，移除附件
+              setMessages(prev => {
+                const updated = [...prev];
+                const userIdx = updated.length - 2;
+                if (userIdx >= 0) {
+                  updated[userIdx] = {
+                    ...updated[userIdx],
+                    attachments: undefined,
+                  };
+                }
+                return updated;
+              });
+              // 显示警告
+              setError(data.warning || '当前模型不支持读取图片内容');
+            } else if (eventType === 'delta' && data.content) {
               fullContent += data.content;
               setMessages(prev => {
                 const updated = [...prev];

@@ -66,12 +66,13 @@ export interface Conversation {
 }
 
 export interface MessageAttachment {
-  type: 'image';
+  type: 'image' | 'file';
   dataBase64: string;
   mimeType: string;
   fileName: string;
   width?: number;
   height?: number;
+  fileSize?: number;
 }
 
 export interface ChatMessage {

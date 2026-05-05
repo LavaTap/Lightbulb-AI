@@ -85,3 +85,42 @@ export function formatRelativeTime(dateString: string): string {
 export function base64ToDataUrl(base64: string, mimeType = 'image/png'): string {
   return `data:${mimeType};base64,${base64}`;
 }
+
+export async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function getFileIcon(fileName: string): { icon: string; color: string } {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
+  const docExts = ['doc', 'docx', 'txt', 'md', 'rtf', 'odt', 'pdf'];
+  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'cs', 'go', 'rs', 'rb', 'php', 'swift', 'kt', 'scala', 'sql', 'sh', 'bash', 'yaml', 'yml', 'json', 'xml', 'html', 'css', 'scss', 'less'];
+  const spreadsheetExts = ['xls', 'xlsx', 'csv', 'numbers'];
+  const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'];
+  const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
+  const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'];
+
+  if (imageExts.includes(ext)) return { icon: 'image', color: '#a855f7' };
+  if (docExts.includes(ext)) return { icon: 'document', color: '#3b82f6' };
+  if (codeExts.includes(ext)) return { icon: 'code', color: '#22c55e' };
+  if (spreadsheetExts.includes(ext)) return { icon: 'spreadsheet', color: '#10b981' };
+  if (archiveExts.includes(ext)) return { icon: 'archive', color: '#f59e0b' };
+  if (videoExts.includes(ext)) return { icon: 'video', color: '#ef4444' };
+  if (audioExts.includes(ext)) return { icon: 'audio', color: '#ec4899' };
+  return { icon: 'file', color: '#6b7280' };
+}
