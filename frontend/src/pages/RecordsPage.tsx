@@ -3,6 +3,7 @@ import { Trash2, Sparkles, Wand2, Image, FileImage, Loader2, Eye } from 'lucide-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RecordDetailDialog } from '@/components/RecordDetailDialog';
+import { UsageStatistics } from '@/components/UsageStatistics';
 import { recordsApi } from '@/services/api';
 import { formatRelativeTime, formatTokens, base64ToDataUrl } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,7 @@ const FEATURE_ICONS: Record<string, React.ReactNode> = {
 
 const FEATURE_LABELS: Record<string, string> = {
   inspiration: '灵感提示',
-  character: '角色生图',
+  character: '文生图',
   threeview: '角色三视图',
   poster: '海报生成',
 };
@@ -188,6 +189,8 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
             ))}
           </div>
         )}
+
+        <UsageStatistics />
       </div>
 
       {/* Detail Dialog */}

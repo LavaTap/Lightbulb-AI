@@ -18,6 +18,7 @@ import type {
   SendMessageRequest,
   ConversationsResponse,
   ConversationDetailResponse,
+  UsageStatisticsResponse,
 } from '@/types/api';
 import type { APIConfig, MessageAttachment } from '@/types/index';
 
@@ -72,6 +73,11 @@ export const recordsApi = {
   
   delete: async (id: number): Promise<void> => {
     await api.delete(`/records/${id}`);
+  },
+
+  getStatistics: async (): Promise<UsageStatisticsResponse> => {
+    const response = await api.get('/records/statistics');
+    return response.data;
   },
 };
 

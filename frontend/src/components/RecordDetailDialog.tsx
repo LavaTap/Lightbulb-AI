@@ -12,7 +12,7 @@ import type { GenerationRecord } from '@/types';
 
 const FEATURE_LABELS: Record<string, string> = {
   inspiration: '灵感提示',
-  character: '角色生图',
+  character: '文生图',
   threeview: '角色三视图',
   poster: '海报生成',
 };

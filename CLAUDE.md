@@ -67,23 +67,40 @@ Lightbulb AI 是一个本地优先的 AI 创意辅助工具，采用简单的 mo
 ### 技术栈
 - **前端**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui（无重量级状态管理，使用 React Hooks + Context）
 - **后端**: Node.js + Express + TypeScript + sql.js（嵌入式 SQLite，无需外部数据库）
-- **AI 集成**: OpenAI SDK 支持多服务商（10+ 服务商：OpenAI、Google、DeepSeek、阿里云、腾讯云等）
+- **AI 集成**: OpenAI SDK 支持多服务商（10+ 服务商：OpenAI、Google、DeepSeek、阿里云、腾讯云、讯飞、字节跳动、百度等）
+- **向量记忆**: LanceDB 用于对话语义搜索和记忆检索
+- **文件解析**: mammoth（DOCX）、pdf-parse（PDF）、xlsx（Excel）、cheerio（网页内容抓取）
+- **图表可视化**: recharts（用量统计等图表）
 
 ### 核心架构
 ```
 用户浏览器 (React SPA :3000)
     ↓ /api (Vite 代理)
 Express 服务器 (:3001)
-    ├─ 路由层: generate（视觉/图像/海报生成）、records（历史记录）、modelConfigs（API 密钥管理）
-    ├─ 服务层: visionService（图像分析）、imageGenService（多服务商图像生成）、posterService（海报生成流程）
-    └─ SQLite 数据库 (data/lightbulb.db): 存储模型配置和生成记录
+    ├─ 路由层: generate（视觉/图像/海报生成）、records（历史记录+用量统计）、
+    │          modelConfigs（API 密钥管理）、chat（AI 对话，SSE 流式响应）
+    ├─ 服务层: visionService（图像分析）、imageGenService（多服务商图像生成）、
+    │          posterService（海报生成流程）、chatService（对话流式响应）、
+    │          memoryService（对话记忆+摘要）、lanceService（向量数据库）、
+    │          embeddingService（文本向量化）、fileParser（文件解析）、
+    │          webFetcher（网页内容抓取）
+    └─ SQLite 数据库 (data/lightbulb.db): 存储模型配置、生成记录、对话历史
 ```
 
 ### 核心模块
 - **模型管理系统**: API 密钥完整 CRUD 操作、自动检测模型能力、按类别过滤（视觉/文生图/图生图/文本）
 - **图像生成路由**: 根据模型名称动态路由到对应服务商 API（OpenAI 兼容、通义万相、腾讯混元、GPTImage2 代理）
+- **AI 对话系统**: SSE 流式响应、文件附件上传（图片/PDF/DOCX/XLSX）、URL 网页内容自动抓取、对话记忆与语义搜索
 - **双图存储机制**: 在 SQLite 中同时存储 200px 缩略图（用于列表快速加载）和原始全尺寸图片（用于下载）
-- **功能页面**: 5 个主要功能（灵感提示、角色生图、三视图生成、海报生成、CG 生成占位）
+- **用量统计**: 记录页下方可折叠统计面板，含饼状图（服务商分布）、折线图（每日 Token）、柱状图（各模型 Token）
+- **功能页面**: 6 个主要功能（灵感提示、AI 对话、文生图、三视图生成、海报生成、CG 生成占位）
+
+### 数据库表结构
+- `generation_records`: 生成记录（feature_type, prompt, 图片, model_provider, model_name, token_usage）
+- `conversations`: 对话元数据（title, model, system_prompt, summary）
+- `chat_messages`: 对话消息（role, content, token_usage, attachments）
+- `model_configs`: 模型配置（provider, model, api_key, category, capabilities）
+- `app_settings`: 应用设置（key-value）
 
 ## 重要模式与指南
 
@@ -100,7 +117,7 @@ Express 服务器 (:3001)
 ### 代码规范
 - 前端导入使用路径别名 `@/`（映射到 `frontend/src/`）
 - 所有 API 请求通过 `frontend/src/services/api.ts` 中的类型化 Axios 客户端发送
-- 业务逻辑放在自定义 Hooks 中（`useGeneration.ts`、`useApiConfig.ts`），不要放在页面组件中
+- 业务逻辑放在自定义 Hooks 中（`useGeneration.ts`、`useApiConfig.ts`、`useChat.ts`），不要放在页面组件中
 - 后端所有请求校验使用 Zod
 - 所有数据库写入操作执行后必须调用 `saveDatabase()` 才能将更改持久化到磁盘
 - 提交代码前必须通过 ESLint 检查
@@ -135,3 +152,5 @@ Express 服务器 (:3001)
 - **图片大小限制**: 前端上传前会压缩图片，后端有 50MB 请求体限制
 - **API 密钥安全**: 密钥以明文存储在本地 SQLite 数据库中（本地使用可接受）
 - **长时运行请求**: 图像生成请求有 2 分钟超时，gptimage2 请求有 10 分钟超时
+- **SSE 流式响应**: 对话消息使用原生 fetch（非 Axios），后端通过 `res.write()` + `res.end()` 推送
+- **Token 计量**: 图像生成 API 无标准 token 返回时按 `prompt.length / 4` 估算；对话按 API 实际返回 `total_tokens` 记录

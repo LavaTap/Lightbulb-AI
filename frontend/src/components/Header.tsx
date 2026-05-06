@@ -12,7 +12,7 @@ interface HeaderProps {
 const TABS: { id: FeatureType; label: string }[] = [
   { id: 'inspiration', label: '灵感提示' },
   { id: 'chat', label: 'AI 对话' },
-  { id: 'character', label: '角色生图' },
+  { id: 'character', label: '文生图' },
   { id: 'threeview', label: '角色三视图' },
   { id: 'poster', label: '海报生成' },
   { id: 'cg', label: 'CG生成' },

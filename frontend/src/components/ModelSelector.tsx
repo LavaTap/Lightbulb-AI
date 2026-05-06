@@ -613,7 +613,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
               </div>
               <div className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-900/20">
                 <span className="text-xs font-mono bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">text-to-image</span>
-                <span>文生图 → 角色生图</span>
+                <span>文生图 → 文生图</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded bg-purple-50 dark:bg-purple-900/20">
                 <span className="text-xs font-mono bg-purple-100 dark:bg-purple-800 px-1.5 py-0.5 rounded">image-to-image</span>

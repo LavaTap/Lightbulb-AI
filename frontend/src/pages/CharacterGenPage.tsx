@@ -46,7 +46,7 @@ export function CharacterGenPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold gradient-text">角色生图</h1>
+        <h1 className="text-3xl font-bold gradient-text">文生图</h1>
         <p className="text-gray-600 dark:text-gray-400">
           输入提示词，AI 将生成角色图片
         </p>

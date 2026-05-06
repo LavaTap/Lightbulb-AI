@@ -139,3 +139,24 @@ export interface ConversationDetailResponse {
   success: boolean;
   data: Conversation & { messages: ChatMessage[] };
 }
+
+// Usage Statistics
+export interface UsageStatisticsResponse {
+  success: boolean;
+  data: {
+    totalRecords: number;
+    totalTokens: number;
+    modelProviderDistribution: Array<{
+      provider: string;
+      count: number;
+    }>;
+    dailyTokenUsage: Array<{
+      date: string;
+      totalTokens: number;
+    }>;
+    tokenUsageByModel: Array<{
+      modelName: string;
+      totalTokens: number;
+    }>;
+  };
+}

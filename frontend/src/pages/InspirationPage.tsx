@@ -73,6 +73,32 @@ export function InspirationPage() {
     return JSON.stringify(analysis, null, 2);
   };
 
+  // 从AI分析结果中提取字段值（zh），不存在则返回空字符串
+  const getFieldZh = (analysis: VisionAnalysisResult, key: string): string => {
+    return (analysis as any)?.[key]?.zh || '';
+  };
+
+  // 本地拼装角色基准资产（Character Benchmark Asset）提示词
+  const buildCharacterBenchmarkPrompt = (analysis: VisionAnalysisResult): string => {
+    const colorStyle = getFieldZh(analysis, 'colorStyle');
+    const material = getFieldZh(analysis, 'material');
+    const proportion = getFieldZh(analysis, 'proportion');
+
+    const analysisSection = [
+      colorStyle && `【色彩画风】${colorStyle}`,
+      material && `【材质特征】${material}`,
+      proportion && `【角色比例】${proportion}`,
+    ].filter(Boolean).join('；');
+
+    return `严格参考上传图的原生美术风格与核心质感，生成一张精确作为视频大模型"视觉真值（Ground Truth）"的"风格"角色基准资产（Character Benchmark Asset）大图。采用左一右三水平对齐的宽幅布局，背景为纯白无阴影的工业级白底。
+
+画面最左侧：展示一个超高清的头部近景大特写肖像（仅到肩颈处）。特写必须极其清晰地完美还原参考图人物的面部骨相特征、五官细节、特定的发型结构以及材质。
+
+画面右侧：并排排列三个超清的全身站立像。顺序为：1. 全身正视站姿；2. 全身90度正侧视站姿；3. 全身正后视站姿。强约束：这三个全身像必须具有恰当的比例结构，保持放松自然的标准A-pose站姿。全身像表情必须固定为中立无表情，绝对禁止摆任何戏剧化动作或遮挡身体细节。这三个全身像的面部、发型、体态与服饰必须与最左侧的大特写保持100%绝对同源一致。
+
+${analysisSection ? `分析参考：${analysisSection}` : ''}`;
+  };
+
   const handleModelChange = (modelId: string, config: ModelConfig) => {
     setSelectedModelConfig(config);
   };
@@ -271,12 +297,38 @@ export function InspirationPage() {
                   <CardTitle className="text-base">提示词</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Tabs defaultValue="zh" className="w-full">
+                  <Tabs defaultValue={selectedCategory === 'character' ? 'benchmark' : 'zh'} className="w-full">
                     <TabsList className="w-full justify-start">
+                      {selectedCategory === 'character' && (
+                        <TabsTrigger value="benchmark">角色基准资产</TabsTrigger>
+                      )}
                       <TabsTrigger value="zh">中文</TabsTrigger>
                       <TabsTrigger value="en">English</TabsTrigger>
                       <TabsTrigger value="json">JSON</TabsTrigger>
                     </TabsList>
+
+                    {selectedCategory === 'character' && (
+                      <TabsContent value="benchmark" className="mt-4">
+                        <div className="relative">
+                          <Textarea
+                            value={buildCharacterBenchmarkPrompt(analysis)}
+                            readOnly
+                            className="min-h-[240px] font-mono text-sm resize-y"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="absolute top-2 right-2"
+                            onClick={() => handleCopy(buildCharacterBenchmarkPrompt(analysis), 'benchmark')}
+                          >
+                            {copied === 'benchmark' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                          💡 此提示词可直接用于图片生成模型，生成视频大模型训练所需的"视觉真值"角色基准资产图。
+                        </p>
+                      </TabsContent>
+                    )}
 
                     <TabsContent value="zh" className="mt-4">
                       <div className="relative">

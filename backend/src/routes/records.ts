@@ -6,6 +6,75 @@ import type { GenerationRecord } from '../types/index.js';
 
 const router = Router();
 
+// Helper: map sql.js exec result to array of objects
+function mapResult(result: import('sql.js').QueryExecResult[] | undefined): any[] {
+  if (!result || result.length === 0) return [];
+  const columns = result[0].columns;
+  return result[0].values.map((row: any[]) => {
+    const obj: any = {};
+    columns.forEach((col: string, idx: number) => {
+      obj[col] = row[idx];
+    });
+    return obj;
+  });
+}
+
+// Get usage statistics (must be before /:id routes)
+router.get('/statistics', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = await getDatabaseSync();
+
+    const providerResult = db.exec(
+      `SELECT model_provider, COUNT(*) as count
+       FROM generation_records WHERE feature_type != 'chat'
+       GROUP BY model_provider ORDER BY count DESC`
+    );
+    const modelProviderDistribution = mapResult(providerResult);
+
+    const dailyResult = db.exec(
+      `SELECT DATE(created_at) as date, SUM(token_usage) as total_tokens
+       FROM generation_records WHERE feature_type != 'chat'
+       GROUP BY DATE(created_at) ORDER BY date ASC`
+    );
+    const dailyTokenUsage = mapResult(dailyResult);
+
+    const modelResult = db.exec(
+      `SELECT model_name, SUM(token_usage) as total_tokens
+       FROM generation_records WHERE feature_type != 'chat'
+       GROUP BY model_name ORDER BY total_tokens DESC`
+    );
+    const tokenUsageByModel = mapResult(modelResult);
+
+    const summaryResult = db.exec(
+      `SELECT COUNT(*) as total_records, COALESCE(SUM(token_usage), 0) as total_tokens
+       FROM generation_records WHERE feature_type != 'chat'`
+    );
+    const summary = mapResult(summaryResult);
+
+    res.json({
+      success: true,
+      data: {
+        totalRecords: summary[0]?.total_records || 0,
+        totalTokens: summary[0]?.total_tokens || 0,
+        modelProviderDistribution: modelProviderDistribution.map((r: any) => ({
+          provider: r.model_provider,
+          count: r.count,
+        })),
+        dailyTokenUsage: dailyTokenUsage.map((r: any) => ({
+          date: r.date,
+          totalTokens: r.total_tokens,
+        })),
+        tokenUsageByModel: tokenUsageByModel.map((r: any) => ({
+          modelName: r.model_name,
+          totalTokens: r.total_tokens,
+        })),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all records with pagination
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -19,20 +88,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const total = totalResult[0]?.values[0]?.[0] as number || 0;
     
     const recordsResult = db.exec(`
-      SELECT * FROM generation_records 
-      ORDER BY created_at DESC 
+      SELECT * FROM generation_records
+      ORDER BY created_at DESC
       LIMIT ${pageSize} OFFSET ${offset}
     `);
-    
-    const columns = recordsResult[0]?.columns || [];
-    const records: any[] = (recordsResult[0]?.values || []).map((row: any[]) => {
-      const obj: any = {};
-      columns.forEach((col: string, idx: number) => {
-        obj[col] = row[idx];
-      });
-      return obj;
-    });
-    
+
+    const records = mapResult(recordsResult);
+
     const formattedRecords: GenerationRecord[] = records.map((r: any) => ({
       id: r.id,
       featureType: r.feature_type,

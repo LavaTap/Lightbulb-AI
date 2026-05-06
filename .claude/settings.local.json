@@ -23,7 +23,9 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);console.log\\(JSON.stringify\\(JSON.parse\\(d\\),null,2\\)\\)\")",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(d\\);console.log\\('apiKey:',j.data.apiKey?j.data.apiKey.slice\\(0,8\\)+'...':'EMPTY'\\);console.log\\('endpoint:',j.data.endpoint\\)\")",
       "Bash(taskkill //F //IM node.exe)",
-      "Bash(git clone *)"
+      "Bash(git clone *)",
+      "Bash(cat frontend/vite.config.ts)",
+      "Bash(cat frontend/vite.config.js)"
     ]
   }
 }

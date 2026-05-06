@@ -2,7 +2,7 @@
                                                                                                                                                                                   
      Context
                                                                                                                                                                                   
-     用户在任意功能页面（灵感提示、角色生图、三视图、海报、AI对话）切换 ModelDropdown 模型后，实际 API 调用仍使用 localStorage 中的旧 provider                                  
+     用户在任意功能页面（灵感提示、文生图、三视图、海报、AI对话）切换 ModelDropdown 模型后，实际 API 调用仍使用 localStorage 中的旧 provider                                  
      配置，而非用户选择的模型。ModelDropdown 只是"视觉装饰"——切换模型后 config 完全没有传递到 API 调用。
 
      根因分析
@@ -137,7 +137,7 @@
      验证方案
 
      1. 在灵感提示页选 DeepSeek 模型 → 执行分析 → 后端日志确认收到 DeepSeek 的 config
-     2. 切换到角色生图页选 OpenAI 模型 → 生图 → 后端日志确认收到 OpenAI 的 config
+     2. 切换到文生图页选 OpenAI 模型 → 生图 → 后端日志确认收到 OpenAI 的 config
      3. 切回灵感提示页 → 确认仍显示 DeepSeek（页面隔离持久化）
      4. 在 ChatPage 选 GPT-4o → 发消息 → 后端日志确认 model 为 gpt-4o
      5. 刷新页面 → 各页面恢复上次选择的模型（localStorage 持久化）
