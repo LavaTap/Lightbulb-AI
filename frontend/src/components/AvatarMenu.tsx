@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { User, History, ChevronDown, Sun, Moon, Bot } from 'lucide-react';
+import { User, History, ChevronDown, Sun, Moon, Bot, BarChart3 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelManagerContent } from './ModelManagerContent';
+import { UsageStatistics } from './UsageStatistics';
 import { useTheme } from '@/hooks/useTheme';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,7 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
   const { theme } = useTheme();
   const { currentProvider } = useApiConfig();
   const [modelManagerOpen, setModelManagerOpen] = useState(false);
+  const [statisticsOpen, setStatisticsOpen] = useState(false);
 
   return (
     <>
@@ -64,6 +66,20 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
               </div>
             </DropdownMenu.Item>
 
+            {/* Usage Statistics */}
+            <DropdownMenu.Item
+              onSelect={(e) => {
+                e.preventDefault();
+                setStatisticsOpen(true);
+              }}
+              className="outline-none cursor-pointer"
+            >
+              <div className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
+                <BarChart3 className="w-4 h-4" />
+                <span>用量统计</span>
+              </div>
+            </DropdownMenu.Item>
+
             <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
 
             {/* Theme Toggle */}
@@ -86,6 +102,22 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
           <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[700px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
             <ModelManagerContent onClose={() => setModelManagerOpen(false)} />
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Usage Statistics Dialog */}
+      <Dialog.Root open={statisticsOpen} onOpenChange={setStatisticsOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[900px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
+            <div className="flex items-center justify-between mb-4">
+              <Dialog.Title className="text-lg font-semibold">用量统计</Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
+              </Dialog.Close>
+            </div>
+            <UsageStatistics />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

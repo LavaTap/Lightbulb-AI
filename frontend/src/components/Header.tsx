@@ -16,6 +16,7 @@ const TABS: { id: FeatureType; label: string }[] = [
   { id: 'threeview', label: '角色三视图' },
   { id: 'poster', label: '海报生成' },
   { id: 'cg', label: 'CG生成' },
+  { id: 'planning', label: '计划面板' },
 ];
 
 export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {

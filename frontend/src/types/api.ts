@@ -141,13 +141,15 @@ export interface ConversationDetailResponse {
 }
 
 // Usage Statistics
+export type StatisticsPeriod = 'week' | 'month' | 'year' | 'all';
+
 export interface UsageStatisticsResponse {
   success: boolean;
   data: {
     totalRecords: number;
     totalTokens: number;
-    modelProviderDistribution: Array<{
-      provider: string;
+    modelDistribution: Array<{
+      modelName: string;
       count: number;
     }>;
     dailyTokenUsage: Array<{

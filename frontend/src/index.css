@@ -1,3 +1,4 @@
+@import '@xyflow/react/dist/style.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -169,3 +170,17 @@ textarea {
 .dark textarea {
   scrollbar-color: #475569 transparent;
 }
+
+/* React Flow dark mode overrides */
+.react-flow__background { opacity: 0.6; }
+.dark .react-flow__background { opacity: 0.4; }
+.react-flow__minimap { border-radius: 8px; overflow: hidden; }
+.dark .react-flow__minimap { background-color: #1e293b; }
+.react-flow__controls { border-radius: 8px; overflow: hidden; }
+.dark .react-flow__controls { background-color: rgba(30,41,59,0.8); border-color: #334155; }
+.dark .react-flow__controls button { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
+.dark .react-flow__controls button:hover { background-color: #334155; }
+.dark .react-flow__edge-path { stroke: #8b5cf6; }
+.react-flow__connection-line { stroke: #8b5cf6; }
+.react-flow__handle { background: #8b5cf6; border: 2px solid #a78bfa; width: 10px; height: 10px; }
+.react-flow__handle.connecting { background: #a78bfa; }

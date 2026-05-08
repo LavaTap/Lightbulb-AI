@@ -7,6 +7,7 @@ import { CharacterGenPage } from '@/pages/CharacterGenPage';
 import { ThreeViewPage } from '@/pages/ThreeViewPage';
 import { PosterGenPage } from '@/pages/PosterGenPage';
 import { CgGenPage } from '@/pages/CgGenPage';
+import { PlanningPage } from '@/pages/PlanningPage';
 import { useTheme } from '@/hooks/useTheme';
 import type { FeatureType } from '@/types';
 
@@ -28,6 +29,8 @@ function App() {
         return <PosterGenPage />;
       case 'cg':
         return <CgGenPage />;
+      case 'planning':
+        return <PlanningPage />;
       default:
         return <InspirationPage />;
     }

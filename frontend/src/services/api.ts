@@ -75,8 +75,8 @@ export const recordsApi = {
     await api.delete(`/records/${id}`);
   },
 
-  getStatistics: async (): Promise<UsageStatisticsResponse> => {
-    const response = await api.get('/records/statistics');
+  getStatistics: async (period: 'week' | 'month' | 'year' | 'all' = 'week'): Promise<UsageStatisticsResponse> => {
+    const response = await api.get('/records/statistics', { params: { period } });
     return response.data;
   },
 };

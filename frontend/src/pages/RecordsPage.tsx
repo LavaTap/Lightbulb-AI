@@ -3,7 +3,6 @@ import { Trash2, Sparkles, Wand2, Image, FileImage, Loader2, Eye } from 'lucide-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RecordDetailDialog } from '@/components/RecordDetailDialog';
-import { UsageStatistics } from '@/components/UsageStatistics';
 import { recordsApi } from '@/services/api';
 import { formatRelativeTime, formatTokens, base64ToDataUrl } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -189,8 +188,6 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
             ))}
           </div>
         )}
-
-        <UsageStatistics />
       </div>
 
       {/* Detail Dialog */}

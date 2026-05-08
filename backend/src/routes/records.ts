@@ -22,32 +22,50 @@ function mapResult(result: import('sql.js').QueryExecResult[] | undefined): any[
 // Get usage statistics (must be before /:id routes)
 router.get('/statistics', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const period = (req.query.period as string) || 'week';
     const db = await getDatabaseSync();
 
-    const providerResult = db.exec(
-      `SELECT model_provider, COUNT(*) as count
-       FROM generation_records WHERE feature_type != 'chat'
-       GROUP BY model_provider ORDER BY count DESC`
-    );
-    const modelProviderDistribution = mapResult(providerResult);
+    // Build date filter based on period
+    let dateFilter = '';
+    if (period === 'week') {
+      dateFilter = "AND created_at >= date('now', '-7 days')";
+    } else if (period === 'month') {
+      dateFilter = "AND created_at >= date('now', '-30 days')";
+    } else if (period === 'year') {
+      dateFilter = "AND created_at >= date('now', '-365 days')";
+    }
+    // 'all' = no filter
 
+    const baseWhere = `feature_type != 'chat' ${dateFilter}`;
+
+    // Model distribution (by model_name, not provider)
+    const modelDistResult = db.exec(
+      `SELECT model_name, COUNT(*) as count
+       FROM generation_records WHERE ${baseWhere}
+       GROUP BY model_name ORDER BY count DESC`
+    );
+    const modelDistribution = mapResult(modelDistResult);
+
+    // Daily token usage
     const dailyResult = db.exec(
       `SELECT DATE(created_at) as date, SUM(token_usage) as total_tokens
-       FROM generation_records WHERE feature_type != 'chat'
+       FROM generation_records WHERE ${baseWhere}
        GROUP BY DATE(created_at) ORDER BY date ASC`
     );
     const dailyTokenUsage = mapResult(dailyResult);
 
+    // Token usage by model (bar chart)
     const modelResult = db.exec(
       `SELECT model_name, SUM(token_usage) as total_tokens
-       FROM generation_records WHERE feature_type != 'chat'
+       FROM generation_records WHERE ${baseWhere}
        GROUP BY model_name ORDER BY total_tokens DESC`
     );
     const tokenUsageByModel = mapResult(modelResult);
 
+    // Summary totals for the period
     const summaryResult = db.exec(
       `SELECT COUNT(*) as total_records, COALESCE(SUM(token_usage), 0) as total_tokens
-       FROM generation_records WHERE feature_type != 'chat'`
+       FROM generation_records WHERE ${baseWhere}`
     );
     const summary = mapResult(summaryResult);
 
@@ -56,8 +74,8 @@ router.get('/statistics', async (req: Request, res: Response, next: NextFunction
       data: {
         totalRecords: summary[0]?.total_records || 0,
         totalTokens: summary[0]?.total_tokens || 0,
-        modelProviderDistribution: modelProviderDistribution.map((r: any) => ({
-          provider: r.model_provider,
+        modelDistribution: modelDistribution.map((r: any) => ({
+          modelName: r.model_name,
           count: r.count,
         })),
         dailyTokenUsage: dailyTokenUsage.map((r: any) => ({
