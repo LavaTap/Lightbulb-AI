@@ -25,7 +25,9 @@
       "Bash(taskkill //F //IM node.exe)",
       "Bash(git clone *)",
       "Bash(cat frontend/vite.config.ts)",
-      "Bash(cat frontend/vite.config.js)"
+      "Bash(cat frontend/vite.config.js)",
+      "WebSearch",
+      "Bash(npx prettier *)"
     ]
   }
 }

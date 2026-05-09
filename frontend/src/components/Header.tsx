@@ -1,6 +1,12 @@
 import { useRef } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, ChevronDown } from 'lucide-react';
 import { AvatarMenu } from './AvatarMenu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { FeatureType } from '@/types';
 
 interface HeaderProps {
@@ -34,7 +40,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
   return (
     <header 
       ref={headerRef}
-      className="sticky top-0 z-40 glass border-b border-gray-200 dark:border-gray-700 transition-all duration-300"
+      className="sticky top-0 z-40 glass border-b border-white/30 dark:border-white/10 transition-all duration-300"
       style={{ '--mouse-x': '50%', '--mouse-y': '50%' } as React.CSSProperties}
       onMouseMove={handleMouseMove}
     >
@@ -55,48 +61,125 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
 
         {/* Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+          {TABS.map((tab) => {
+            // 处理生图子菜单
+            if (['character', 'threeview', 'poster', 'cg'].includes(tab.id)) {
+              return null;
+            }
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={`
+                  group relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                  ${activeTab === tab.id
+                    ? 'text-blue-500 dark:text-primary-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                  }
+                `}
+              >
+                {/* Text with gradient animation on hover */}
+                <span className="relative z-10 inline-block transition-all duration-300 
+                  group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-110
+                  dark:group-hover:bg-gradient-to-r dark:group-hover:from-blue-400 dark:group-hover:to-cyan-400 dark:group-hover:bg-clip-text dark:group-hover:text-transparent">
+                  {tab.label}
+                </span>
+                {/* Underline grow animation */}
+                <span className={`
+                  absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5
+                  transition-all duration-300 rounded-full
+                  ${activeTab === tab.id ? 'w-full' : 'w-0 group-hover:w-full'}
+                  bg-gradient-to-r from-blue-500 to-cyan-500
+                  dark:from-blue-400 dark:to-cyan-400
+                `}></span>
+              </button>
+            );
+          })}
+          
+          {/* 生图子菜单 */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
               className={`
                 group relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${activeTab === tab.id
+                ${['character', 'threeview', 'poster', 'cg'].some(id => activeTab === id)
                   ? 'text-blue-500 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400'
                 }
               `}
             >
-              {/* Text with gradient animation on hover */}
               <span className="relative z-10 inline-block transition-all duration-300 
                 group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-110
-                dark:group-hover:bg-gradient-to-r dark:group-hover:from-blue-400 dark:group-hover:to-cyan-400 dark:group-hover:bg-clip-text dark:group-hover:text-transparent">
-                {tab.label}
+                dark:group-hover:bg-gradient-to-r dark:group-hover:from-blue-400 dark:group-hover:to-cyan-400 dark:group-hover:bg-clip-text dark:group-hover:text-transparent flex items-center gap-1">
+                生图模块
+                <ChevronDown className="h-3 w-3" />
               </span>
-              {/* Underline grow animation */}
               <span className={`
                 absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5
                 transition-all duration-300 rounded-full
-                ${activeTab === tab.id ? 'w-full' : 'w-0 group-hover:w-full'}
+                ${['character', 'threeview', 'poster', 'cg'].some(id => activeTab === id)
+                  ? 'w-full'
+                  : 'w-0 group-hover:w-full'
+                }
                 bg-gradient-to-r from-blue-500 to-cyan-500
                 dark:from-blue-400 dark:to-cyan-400
               `}></span>
-            </button>
-          ))}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              <DropdownMenuItem onClick={() => onTabChange('character')}>
+                文生图
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('threeview')}>
+                角色三视图
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('poster')}>
+                海报生成
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('cg')}>
+                CG生成
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Mobile Tabs */}
-        <select
-          value={activeTab}
-          onChange={(e) => onTabChange(e.target.value as FeatureType)}
-          className="md:hidden px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
-        >
-          {TABS.map((tab) => (
-            <option key={tab.id} value={tab.id}>
-              {tab.label}
-            </option>
-          ))}
-        </select>
+        <div className="md:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={`px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm`}
+            >
+              {TABS.find(t => t.id === activeTab)?.label || '选择页面'}
+              <ChevronDown className="ml-2 h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              {TABS.map((tab) => {
+                if (['character', 'threeview', 'poster', 'cg'].includes(tab.id)) {
+                  return null;
+                }
+                return (
+                  <DropdownMenuItem key={tab.id} onClick={() => onTabChange(tab.id)}>
+                    {tab.label}
+                  </DropdownMenuItem>
+                );
+              })}
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+              <DropdownMenuItem disabled className="text-xs text-gray-500">
+                生图模块
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('character')}>
+                文生图
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('threeview')}>
+                角色三视图
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('poster')}>
+                海报生成
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('cg')}>
+                CG生成
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Actions */}
         <AvatarMenu onOpenRecords={onOpenRecords} />

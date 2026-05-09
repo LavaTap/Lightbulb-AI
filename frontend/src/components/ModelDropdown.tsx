@@ -35,9 +35,9 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700",
-          "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm",
-          "bg-white dark:bg-gray-800 shadow-sm"
+          "flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200/60 dark:border-gray-700/50",
+          "hover:bg-white/60 dark:hover:bg-white/10 transition-colors text-sm",
+          "bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl shadow-sm"
         )}>
           <Bot className="w-4 h-4 text-primary-500" />
           <span className="font-medium">
@@ -53,15 +53,15 @@ export function ModelDropdown({ category, selectedModel, onModelChange }: ModelD
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           className={cn(
-            "min-w-[240px] rounded-lg border border-gray-200 dark:border-gray-700",
-            "bg-white dark:bg-gray-800 shadow-xl p-1",
+            "min-w-[240px] rounded-xl border border-white/30 dark:border-white/10",
+            "bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-1",
             "animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out",
             "max-h-[320px] overflow-y-auto"
           )}
           sideOffset={8}
           align="start"
         >
-          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-white/20 dark:border-white/10">
             {label} 模型
           </div>
           

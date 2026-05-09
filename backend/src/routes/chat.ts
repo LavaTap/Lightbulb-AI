@@ -186,10 +186,13 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
     // 保存用户消息
     const attachmentsJson = data.attachments ? JSON.stringify(data.attachments) : undefined;
+    // 估算用户消息 token 用量：按 1 token ≈ 4 个字符估算
+    const estimatedUserTokens = Math.ceil(data.content.length / 4);
     await createMessage({
       conversation_id: conversationId,
       role: 'user',
       content: data.content,
+      token_usage: estimatedUserTokens,
       attachments: attachmentsJson,
     });
 

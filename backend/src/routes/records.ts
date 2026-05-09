@@ -36,38 +36,59 @@ router.get('/statistics', async (req: Request, res: Response, next: NextFunction
     }
     // 'all' = no filter
 
-    const baseWhere = `feature_type != 'chat' ${dateFilter}`;
+    // Get total records and total tokens from both tables
+    // generation_records for image generation, chat_messages for AI chat
+    const genWhere = `1=1 ${dateFilter}`;
+    const chatWhere = `1=1 ${dateFilter}`;
 
-    // Model distribution (by model_name, not provider)
+    // Get combined summary
+    const summaryResult = db.exec(`
+      SELECT
+        (SELECT COUNT(*) FROM generation_records WHERE ${genWhere}) +
+        (SELECT COUNT(*) FROM chat_messages WHERE ${chatWhere}) as total_records,
+        COALESCE((SELECT COALESCE(SUM(token_usage), 0) FROM generation_records WHERE ${genWhere}), 0) +
+        COALESCE((SELECT COALESCE(SUM(token_usage), 0) FROM chat_messages WHERE ${chatWhere}), 0) as total_tokens
+    `);
+    const summary = mapResult(summaryResult);
+
+    // Model distribution (only from generation_records, chat messages don't have model per message)
     const modelDistResult = db.exec(
       `SELECT model_name, COUNT(*) as count
-       FROM generation_records WHERE ${baseWhere}
+       FROM generation_records WHERE ${genWhere}
        GROUP BY model_name ORDER BY count DESC`
     );
     const modelDistribution = mapResult(modelDistResult);
 
-    // Daily token usage
-    const dailyResult = db.exec(
-      `SELECT DATE(created_at) as date, SUM(token_usage) as total_tokens
-       FROM generation_records WHERE ${baseWhere}
-       GROUP BY DATE(created_at) ORDER BY date ASC`
-    );
+    // Daily token usage from both tables combined
+    const dailyResult = db.exec(`
+      WITH daily_gen AS (
+        SELECT DATE(created_at) as date, SUM(token_usage) as tokens
+        FROM generation_records WHERE ${genWhere}
+        GROUP BY DATE(created_at)
+      ),
+      daily_chat AS (
+        SELECT DATE(created_at) as date, SUM(token_usage) as tokens
+        FROM chat_messages WHERE ${chatWhere}
+        GROUP BY DATE(created_at)
+      )
+      SELECT date, (COALESCE(daily_gen.tokens, 0) + COALESCE(daily_chat.tokens, 0)) as total_tokens
+      FROM (
+        SELECT date FROM daily_gen UNION SELECT date FROM daily_chat
+      ) AS all_dates
+      LEFT JOIN daily_gen USING(date)
+      LEFT JOIN daily_chat USING(date)
+      ORDER BY date ASC
+    `);
     const dailyTokenUsage = mapResult(dailyResult);
 
-    // Token usage by model (bar chart)
+    // Token usage by model from generation_records only
+    // Chat messages don't track model per message at this time
     const modelResult = db.exec(
       `SELECT model_name, SUM(token_usage) as total_tokens
-       FROM generation_records WHERE ${baseWhere}
+       FROM generation_records WHERE ${genWhere}
        GROUP BY model_name ORDER BY total_tokens DESC`
     );
     const tokenUsageByModel = mapResult(modelResult);
-
-    // Summary totals for the period
-    const summaryResult = db.exec(
-      `SELECT COUNT(*) as total_records, COALESCE(SUM(token_usage), 0) as total_tokens
-       FROM generation_records WHERE ${baseWhere}`
-    );
-    const summary = mapResult(summaryResult);
 
     res.json({
       success: true,

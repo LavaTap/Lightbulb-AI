@@ -19,7 +19,7 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
   const [recordsOpen, setRecordsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-transparent transition-colors duration-200">
       <Header
         activeTab={activeTab}
         onTabChange={onTabChange}

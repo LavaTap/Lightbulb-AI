@@ -108,15 +108,15 @@ export function RecordsPage({ embedded }: RecordsPageProps) {
             <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
           </div>
         ) : records.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">
+          <Card className="glass-card">
+            <CardContent className="p-8 text-center text-primary-700/70">
               暂无生成记录
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-3">
             {records.map((record) => (
-              <Card key={record.id} className="group hover:shadow-md transition-shadow">
+              <Card key={record.id} className="glass-card group hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {/* Thumbnail */}

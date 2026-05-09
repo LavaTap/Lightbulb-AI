@@ -4,7 +4,6 @@ import {
   Background,
   BackgroundVariant,
   MiniMap,
-  Controls,
   type Node,
   type Edge,
   type NodeChange,
@@ -173,8 +172,8 @@ export function PlanningCanvas({
   return (
     <div
       ref={reactFlowWrapperRef}
-      className="w-full bg-gray-50 dark:bg-gray-900/50 relative"
-      style={{ height: 'calc(100vh - 64px)' }}
+      className="w-full relative"
+      style={{ height: 'calc(100vh - 64px)', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -202,7 +201,7 @@ export function PlanningCanvas({
         zoomOnScroll={!scrollToPan}
         panOnScroll={scrollToPan}
         panOnDrag={true}
-        className="touch-none"
+        className="touch-none backdrop-blur-sm bg-glass-light/50 dark:bg-glass-dark/50"
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -215,20 +214,17 @@ export function PlanningCanvas({
           maskColor="rgba(15, 23, 42, 0.7)"
           className="!bg-gray-100 dark:!bg-gray-800"
         />
-        <Controls
-          showInteractive={false}
-          className="!bg-white/80 dark:!bg-gray-800/80 !border-gray-200 dark:!border-gray-700 !shadow-lg !rounded-lg"
-        />
+
       </ReactFlow>
 
       {/* 拖拽覆盖层 */}
       {isDragOver && (
-        <div className="absolute inset-0 bg-primary-500/20 border-2 border-dashed border-primary-500 z-20 flex items-center justify-center pointer-events-none">
-          <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-xl">
+        <div className="absolute inset-0 backdrop-blur-sm bg-primary-500/10 dark:bg-primary-500/20 border-2 border-dashed border-primary-500/80 dark:border-primary-500/60 z-20 flex items-center justify-center pointer-events-none">
+          <div className="backdrop-blur-md bg-glass-light dark:bg-glass-dark px-6 py-4 rounded-lg shadow-xl border border-white/20 dark:border-black/30">
             <p className="text-lg font-medium text-primary-600 dark:text-primary-400">
               松开鼠标导入图片
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
               支持 JPG、PNG、GIF、WebP、SVG 等所有常见图片格式
             </p>
           </div>

@@ -295,8 +295,8 @@ export function ImageNode({ id, selected, data }: NodeProps) {
       {/* 图片主体 */}
       <div
         className={`group relative rounded-xl border shadow-sm backdrop-blur-sm transition-shadow duration-200
-          bg-white/90 dark:bg-gray-800/90
-          border-gray-200 dark:border-gray-700
+          bg-glass-light/90 dark:bg-glass-dark/90
+          border-white/20 dark:border-black/30
           ${selected ? 'ring-2 ring-primary-400 dark:ring-primary-500 shadow-lg shadow-primary-500/10' : ''}`}
         style={{ width: size.width }}
       >
@@ -326,36 +326,36 @@ export function ImageNode({ id, selected, data }: NodeProps) {
           <div className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             {/* 工具栏头部 - 点击可收缩 */}
             <div
-              className="flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-white/20 dark:hover:bg-black/20 transition-colors"
               onClick={() => setIsToolbarExpanded(false)}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">图片</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">图片</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-400">{zoomLevel}%</span>
-                <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">{zoomLevel}%</span>
+                <ChevronUp className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
               </div>
             </div>
 
             {/* 展开的工具栏内容 */}
-            <div className="flex items-center gap-1 px-2 py-1.5 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-1 px-2 py-1.5 border-t border-white/20 dark:border-black/30">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleZoomOut();
                 }}
-                className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-1.5 rounded hover:bg-white/20 dark:hover:bg-white/10 transition-colors"
                 title="缩小"
               >
-                <ZoomOut className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                <ZoomOut className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleResetZoom();
                 }}
-                className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium text-gray-600 dark:text-gray-400"
+                className="px-2 py-1 rounded hover:bg-white/20 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-300"
                 title="原始大小"
               >
                 100%
@@ -365,42 +365,42 @@ export function ImageNode({ id, selected, data }: NodeProps) {
                   e.stopPropagation();
                   handleZoomIn();
                 }}
-                className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-1.5 rounded hover:bg-white/20 dark:hover:bg-white/10 transition-colors"
                 title="放大"
               >
-                <ZoomIn className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                <ZoomIn className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
               </button>
-              <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
+              <div className="w-px h-4 bg-gray-400 dark:bg-gray-500 mx-1" />
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleFitToScreen();
                 }}
-                className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-1.5 rounded hover:bg-white/20 dark:hover:bg-white/10 transition-colors"
                 title="适配屏幕"
               >
-                <Maximize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                <Maximize2 className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowPanel(!showPanel);
                 }}
-                className={`p-1.5 rounded transition-colors ${showPanel ? 'bg-primary-100 dark:bg-primary-900/30' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                className={`p-1.5 rounded transition-colors ${showPanel ? 'bg-primary-100/50 dark:bg-primary-900/50' : 'hover:bg-white/20 dark:hover:bg-white/10'}`}
                 title="图片设置"
               >
-                <span className={`text-xs font-medium ${showPanel ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`}>设置</span>
+                <span className={`text-xs font-medium ${showPanel ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}>设置</span>
               </button>
             </div>
           </div>
         ) : (
           /* 收缩状态 - 只显示展开按钮 */
           <div
-            className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+            className="bg-white/10 dark:bg-black/10 border-b border-white/20 dark:border-black/30 px-3 py-1 cursor-pointer hover:bg-white/20 dark:hover:bg-black/20 transition-colors flex items-center justify-center"
             onClick={() => setIsToolbarExpanded(true)}
             title="展开工具栏"
           >
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </div>
         )}
 
@@ -419,7 +419,7 @@ export function ImageNode({ id, selected, data }: NodeProps) {
       {showPanel && (
         <div
           ref={panelRef}
-          className="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[180px]"
+          className="absolute z-50 rounded-lg shadow-xl border border-white/20 dark:border-black/30 p-3 min-w-[180px] backdrop-blur-lg bg-glass-light/90 dark:bg-glass-dark/90"
           style={{
             left: `${panelPosition.x}px`,
             top: `${panelPosition.y}px`,
@@ -439,15 +439,15 @@ export function ImageNode({ id, selected, data }: NodeProps) {
             onMouseDown={handlePanelMouseDown}
           >
             <div className="flex items-center gap-2">
-              <GripVertical className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">图片设置</h3>
+              <GripVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">图片设置</h3>
             </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowPanel(false);
               }}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs p-1"
+              className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xs p-1"
             >
               ✕
             </button>
@@ -460,41 +460,41 @@ export function ImageNode({ id, selected, data }: NodeProps) {
               <div className="grid grid-cols-2 gap-1">
                 <button
                   onClick={bringToFront}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 transition-colors"
                   title="置顶"
                 >
-                  <ChevronsUp className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">置顶</span>
+                  <ChevronsUp className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">置顶</span>
                 </button>
                 <button
                   onClick={bringForward}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 transition-colors"
                   title="上移一层"
                 >
-                  <ArrowUp className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">上移</span>
+                  <ArrowUp className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">上移</span>
                 </button>
                 <button
                   onClick={sendBackward}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 transition-colors"
                   title="下移一层"
                 >
-                  <ArrowDown className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">下移</span>
+                  <ArrowDown className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">下移</span>
                 </button>
                 <button
                   onClick={sendToBack}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 transition-colors"
                   title="置底"
                 >
-                  <ChevronsDown className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">置底</span>
+                  <ChevronsDown className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">置底</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <p className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 text-center">
+          <p className="mt-3 pt-3 border-t border-white/20 dark:border-black/30 text-xs text-gray-600 dark:text-gray-400 text-center">
             点击外部或3秒后自动关闭
           </p>
         </div>

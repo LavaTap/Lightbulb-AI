@@ -20,9 +20,20 @@ export default {
           800: '#5b21b6',
           900: '#4c1d95',
         },
+        glass: {
+          light: 'rgba(255, 255, 255, 0.15)',
+          dark: 'rgba(0, 0, 0, 0.25)',
+        }
       },
       animation: {
         'spin-slow': 'spin 2s linear infinite',
+      },
+      backdropBlur: {
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
       },
     },
   },

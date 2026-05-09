@@ -53,9 +53,9 @@ export function CharacterGenPage() {
       </div>
 
       {/* Prompt Input */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>提示词</CardTitle>
+          <CardTitle className="text-primary-700 dark:text-primary-300">提示词</CardTitle>
           <ModelDropdown
             category={['text-to-image', 'image-to-image']}
             selectedModel={selectedModel}
@@ -74,7 +74,7 @@ export function CharacterGenPage() {
             <Button
               onClick={handleGenerate}
               disabled={!prompt.trim() || isLoading}
-              className="px-6"
+              className="px-6 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-lg shadow-primary-500/20"
             >
               {isLoading ? (
                 <motion.div
@@ -95,8 +95,8 @@ export function CharacterGenPage() {
 
       {/* Error Message */}
       {error && (
-        <Card className="border-red-300 bg-red-50 dark:bg-red-900/20">
-          <CardContent className="p-4 text-red-600 dark:text-red-400">
+        <Card className="glass border-red-300/60 bg-gradient-to-r from-red-500/15 to-red-600/10 dark:from-red-900/30 dark:to-red-800/20 backdrop-blur-lg">
+          <CardContent className="p-4 text-red-700 dark:text-red-300">
             {error}
           </CardContent>
         </Card>
@@ -110,17 +110,20 @@ export function CharacterGenPage() {
           className="grid gap-6 md:grid-cols-2"
         >
           {generatedImages.map((img, index) => (
-            <Card key={index} className="overflow-hidden">
-              <img
-                src={base64ToDataUrl(img)}
-                alt={`Generated ${index + 1}`}
-                className="w-full aspect-square object-cover"
-              />
+            <Card key={index} className="overflow-hidden glass-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <div className="relative group">
+                <img
+                  src={base64ToDataUrl(img)}
+                  alt={`Generated ${index + 1}`}
+                  className="w-full aspect-square object-cover transition-transform duration0 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
               <CardContent className="p-4 flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className="flex-1 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-primary-300 dark:border-primary-600 text-primary-700 dark:text-primary-300"
                   onClick={() => handleDownload(img, `generated-${index + 1}.png`)}
                 >
                   <Download className="w-4 h-4 mr-2" />

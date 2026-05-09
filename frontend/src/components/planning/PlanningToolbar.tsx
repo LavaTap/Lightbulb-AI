@@ -68,7 +68,7 @@ export function PlanningToolbar({
 
   return (
     <div className="absolute top-4 left-4 z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl
-      glass border border-gray-200 dark:border-gray-700 shadow-lg">
+      glass backdrop-blur-xl bg-white/20 dark:bg-gray-800/30 border border-white/30 dark:border-white/20 shadow-xl shadow-primary-500/10">
       <input
         ref={fileInputRef}
         type="file"
@@ -150,10 +150,10 @@ function ToolbarButton({
     <button
       onClick={onClick}
       title={label}
-      className={`p-2 rounded-lg transition-colors duration-150 ${
+      className={`p-2 rounded-lg transition-all duration-200 ${
         active
-          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+          ? 'bg-gradient-to-r from-primary-500/30 to-primary-600/30 text-primary-700 dark:text-primary-300 backdrop-blur-sm shadow-sm'
+          : 'text-gray-700 dark:text-gray-300 hover:bg-white/30 dark:hover:bg-white/20 hover:shadow-md backdrop-blur-sm'
       }`}
     >
       {icon}

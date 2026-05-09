@@ -8,7 +8,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/20 dark:bg-gray-800/20 backdrop-blur-md hover:bg-white/40 dark:hover:bg-white/10 transition-all duration-200"
       title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
     >
       <motion.div

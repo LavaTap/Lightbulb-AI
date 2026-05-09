@@ -100,9 +100,9 @@ export function PosterGenPage() {
       </div>
 
       {/* Size Selection - Dropdown */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
             <Image className="w-5 h-5" />
             海报尺寸
           </CardTitle>
@@ -118,47 +118,47 @@ export function PosterGenPage() {
               <SelectValue placeholder="选择海报尺寸" />
             </SelectTrigger>
             <SelectContent>
-              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium border-b border-gray-200 dark:border-gray-700 mb-1">竖版</div>
+              <div className="px-2 py-1.5 text-xs text-primary-600 dark:text-primary-400 font-medium border-b border-white/20 dark:border-white/10 mb-1">竖版</div>
               {POSTER_SIZE_OPTIONS.filter(o => o.ratio.startsWith('9')).map((opt, i) => (
                 <SelectItem key={`port-${i}`} value={opt.label}>
                   <span>{opt.label}</span>
-                  <span className="ml-2 text-xs text-gray-400">{opt.description}</span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{opt.description}</span>
                 </SelectItem>
               ))}
-              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium border-b border-t border-gray-200 dark:border-gray-700 my-1">横版</div>
+              <div className="px-2 py-1.5 text-xs text-primary-600 dark:text-primary-400 font-medium border-b border-t border-white/20 dark:border-white/10 my-1">横版</div>
               {POSTER_SIZE_OPTIONS.filter(o => o.ratio.includes('16') || o.ratio === '21/9').map((opt, i) => (
                 <SelectItem key={`land-${i}`} value={opt.label}>
                   <span>{opt.label}</span>
-                  <span className="ml-2 text-xs text-gray-400">{opt.description}</span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{opt.description}</span>
                 </SelectItem>
               ))}
-              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium border-b border-t border-gray-200 dark:border-gray-700 my-1">正方形</div>
+              <div className="px-2 py-1.5 text-xs text-primary-600 dark:text-primary-400 font-medium border-b border-t border-white/20 dark:border-white/10 my-1">正方形</div>
               {POSTER_SIZE_OPTIONS.filter(o => o.ratio === '1/1').map((opt, i) => (
                 <SelectItem key={`sq-${i}`} value={opt.label}>
                   <span>{opt.label}</span>
-                  <span className="ml-2 text-xs text-gray-400">{opt.description}</span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{opt.description}</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="mt-2 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <AlertCircle className="w-4 h-4" />
-            当前选择：<strong className="text-primary-600 dark:text-primary-400">{selectedSizeOption.resolution}</strong> ({selectedSizeOption.ratio.replace('/', ':')})
+          <div className="mt-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <AlertCircle className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            当前选择：<strong className="text-primary-700 dark:text-primary-300">{selectedSizeOption.resolution}</strong> ({selectedSizeOption.ratio.replace('/', ':')})
           </div>
         </CardContent>
       </Card>
 
       {/* Character Reference - Required */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
             角色参考图
-            <span className="text-red-500 text-xs font-normal">* 必填</span>
+            <span className="text-red-600 dark:text-red-400 text-xs font-normal">* 必填</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {characterImages.length === 0 && (
-            <p className="text-xs text-red-500 mb-2">请上传至少一张角色参考图</p>
+            <p className="text-xs text-red-600 dark:text-red-400 mb-2">请上传至少一张角色参考图</p>
           )}
           <ImageUploadZone
             images={characterImages}
@@ -170,9 +170,9 @@ export function PosterGenPage() {
       </Card>
 
       {/* Poster Reference (Optional) */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>海报参考图（选填）</CardTitle>
+          <CardTitle className="text-primary-700 dark:text-primary-300">海报参考图（选填）</CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUploadZone
@@ -184,11 +184,11 @@ export function PosterGenPage() {
       </Card>
 
       {/* Prompt Input - Required */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
             海报描述
-            {!prompt.trim() && <span className="text-red-500 text-xs font-normal">* 必填</span>}
+            {!prompt.trim() && <span className="text-red-600 dark:text-red-400 text-xs font-normal">* 必填</span>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -199,13 +199,14 @@ export function PosterGenPage() {
             className="min-h-[120px]"
           />
           {!prompt.trim() && (
-            <p className="text-xs text-red-500">* 请输入海报描述，与角色图结合生成效果更佳</p>
+            <p className="text-xs text-red-600 dark:text-red-400">* 请输入海报描述，与角色图结合生成效果更佳</p>
           )}
           
           <div className="flex justify-end">
             <Button
               onClick={handleGenerate}
               disabled={characterImages.length === 0 || !prompt.trim() || isLoading}
+              className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-lg shadow-primary-500/20"
             >
               {isLoading ? (
                 <motion.div
@@ -226,8 +227,8 @@ export function PosterGenPage() {
 
       {/* Error Message */}
       {error && (
-        <Card className="border-red-300 bg-red-50 dark:bg-red-900/20">
-          <CardContent className="p-4 text-red-600 dark:text-red-400">
+        <Card className="glass border-red-300/60 bg-gradient-to-r from-red-500/15 to-red-600/10 dark:from-red-900/30 dark:to-red-800/20 backdrop-blur-lg">
+          <CardContent className="p-4 text-red-700 dark:text-red-300">
             {error}
           </CardContent>
         </Card>
@@ -240,19 +241,21 @@ export function PosterGenPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="flex justify-center"
         >
-          <Card className="max-w-2xl w-full overflow-hidden">
-            <div style={{ aspectRatio: selectedSizeOption.ratio }}>
+          <Card className="max-w-2xl w-full overflow-hidden glass-card hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+            <div style={{ aspectRatio: selectedSizeOption.ratio }} className="relative group">
               <img
                 src={base64ToDataUrl(generatedImage)}
                 alt="Generated Poster"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <CardContent className="p-4 flex justify-between items-center">
-              <span className="text-sm text-gray-500">{selectedSizeOption.resolution}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">{selectedSizeOption.resolution}</span>
               <Button
                 variant="outline"
                 onClick={() => handleDownload(generatedImage)}
+                className="hover:bg-primary-50 dark:hover:bg-primary-900/30 border-primary-300 dark:border-primary-600 text-primary-700 dark:text-primary-300"
               >
                 <Download className="w-4 h-4 mr-2" />
                 下载海报

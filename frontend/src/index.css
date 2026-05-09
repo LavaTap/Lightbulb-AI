@@ -8,6 +8,9 @@
   --bg-secondary: 241 245 249;
   --text-primary: 15 23 42;
   --text-secondary: 100 116 139;
+  --glass-bg: 255 255 255;
+  --glass-border: 255 255 255;
+  --glass-shadow: 147 51 234;
 }
 
 .dark {
@@ -15,11 +18,22 @@
   --bg-secondary: 30 41 59;
   --text-primary: 248 250 252;
   --text-secondary: 148 163 184;
+  --glass-bg: 30 41 59;
+  --glass-border: 148 163 184;
+  --glass-shadow: 139 92 246;
 }
 
 body {
-  @apply bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))];
+  @apply text-[rgb(var(--text-primary))];
   @apply transition-colors duration-200;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 25%, #f5f0ff 50%, #f0faff 75%, #f0f4ff 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.dark body {
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1040 25%, #0f172a 50%, #1a0f2e 75%, #0f0c29 100%);
+  background-attachment: fixed;
 }
 
 /* Global scrollbar styling */
@@ -109,13 +123,74 @@ body {
 
 /* 强制为聊天消息容器设置高度限制 */
 .flex-1.overflow-y-scroll.chat-scrollbar {
-  max-height: calc(100vh - 300px) !important;
+  max-height: calc(100vh - 200px) !important;
   height: auto !important;
 }
 
-/* Glass effect */
+/* Glass effect - 毛玻璃基础 */
 .glass {
-  @apply bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg;
+  @apply backdrop-blur-xl border border-white/20 dark:border-white/10;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  box-shadow: 0 8px 32px rgba(147, 51, 234, 0.08);
+}
+
+.dark .glass {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 41, 59, 0.55) 0%,
+    rgba(30, 41, 59, 0.35) 50%,
+    rgba(30, 41, 59, 0.25) 100%
+  );
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.06);
+}
+
+/* 毛玻璃卡片 - 适用于主要容器 */
+.glass-card {
+  @apply backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  box-shadow:
+    0 8px 32px rgba(147, 51, 234, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.dark .glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 41, 59, 0.65) 0%,
+    rgba(30, 41, 59, 0.45) 50%,
+    rgba(30, 41, 59, 0.3) 100%
+  );
+  box-shadow:
+    0 8px 32px rgba(139, 92, 246, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 高强度毛玻璃 - 适用于需要更强对比度的容器 */
+.glass-strong {
+  @apply backdrop-blur-xl border border-white/40 dark:border-white/20 shadow-lg;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
+}
+
+.dark .glass-strong {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 41, 59, 0.8) 0%,
+    rgba(30, 41, 59, 0.6) 100%
+  );
 }
 
 /* Gradient text - Blue gradient for light/dark mode compatibility */

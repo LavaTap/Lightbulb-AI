@@ -34,8 +34,8 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
         <DropdownMenu.Portal>
           <DropdownMenu.Content
             className={cn(
-              "min-w-[220px] rounded-lg border border-gray-200 dark:border-gray-700",
-              "bg-white dark:bg-gray-800 shadow-xl p-1",
+              "min-w-[220px] rounded-xl border border-white/30 dark:border-white/10",
+              "bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-1",
               "animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out"
             )}
             sideOffset={8}
@@ -80,7 +80,7 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
               </div>
             </DropdownMenu.Item>
 
-            <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
+            <DropdownMenu.Separator className="h-px bg-white/30 dark:bg-white/10 my-1" />
 
             {/* Theme Toggle */}
             <DropdownMenu.Item className="outline-none" onSelect={(e) => e.preventDefault()}>
@@ -100,7 +100,7 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
       <Dialog.Root open={modelManagerOpen} onOpenChange={setModelManagerOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[700px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
+          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[700px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-2xl border border-white/30 dark:border-white/10 bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl p-6 shadow-[0_16px_64px_rgba(0,0,0,0.15)] animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
             <ModelManagerContent onClose={() => setModelManagerOpen(false)} />
           </Dialog.Content>
         </Dialog.Portal>
@@ -110,7 +110,7 @@ export function AvatarMenu({ onOpenRecords }: AvatarMenuProps) {
       <Dialog.Root open={statisticsOpen} onOpenChange={setStatisticsOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[900px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
+          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 sm:max-w-[900px] max-h-[90vh] w-[95vw] overflow-y-auto rounded-2xl border border-white/30 dark:border-white/10 bg-white/70 dark:bg-gray-800/70 backdrop-blur-2xl p-6 shadow-[0_16px_64px_rgba(0,0,0,0.15)] animate-in fade-in-0 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out">
             <div className="flex items-center justify-between mb-4">
               <Dialog.Title className="text-lg font-semibold">用量统计</Dialog.Title>
               <Dialog.Close asChild>

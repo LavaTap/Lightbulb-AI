@@ -172,7 +172,7 @@ export function EdgeStylePopup({
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[180px]"
+      className="absolute z-50 rounded-lg shadow-xl border border-white/20 dark:border-black/30 p-3 min-w-[180px] backdrop-blur-lg bg-glass-light/90 dark:bg-glass-dark/90"
       style={{
         left: `${popupPosition.x}px`,
         top: `${popupPosition.y}px`,
@@ -192,15 +192,15 @@ export function EdgeStylePopup({
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-gray-400" />
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">连线样式</h3>
+          <GripVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">连线样式</h3>
         </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onClose();
           }}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs p-1"
+          className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xs p-1"
         >
           ✕
         </button>
@@ -209,7 +209,7 @@ export function EdgeStylePopup({
       <div className="space-y-3">
         {/* 线型选择 */}
         <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">线型</label>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">线型</label>
           <div className="flex gap-1">
             {(['planning-smoothstep', 'planning-bezier', 'planning-straight'] as const).map((type) => (
               <button
@@ -217,8 +217,8 @@ export function EdgeStylePopup({
                 onClick={() => handleTypeChange(type)}
                 className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                   edgeType === type
-                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                    : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
                 }`}
               >
                 {getTypeIcon(type)}
@@ -230,7 +230,7 @@ export function EdgeStylePopup({
         
         {/* 箭头方向 */}
         <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">箭头方向</label>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">箭头方向</label>
           <div className="flex gap-1">
             {/* 无箭头 */}
             <button
@@ -242,8 +242,8 @@ export function EdgeStylePopup({
               }}
               className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                 !arrowStart && !arrowEnd
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                  : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
               }`}
             >
               <Minus className="w-4 h-4" />
@@ -259,8 +259,8 @@ export function EdgeStylePopup({
               }}
               className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                 arrowStart
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                  : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
               }`}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -276,8 +276,8 @@ export function EdgeStylePopup({
               }}
               className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                 arrowEnd
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                  : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
               }`}
             >
               <ArrowRight className="w-4 h-4" />
@@ -294,8 +294,8 @@ export function EdgeStylePopup({
               }}
               className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                 arrowStart && arrowEnd
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                  : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
               }`}
             >
               <div className="flex items-center">
@@ -309,8 +309,8 @@ export function EdgeStylePopup({
               onClick={handleReverseArrows}
               className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
                 arrowStart !== arrowEnd
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary-100/50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 backdrop-blur-sm'
+                  : 'bg-white/20 dark:bg-black/20 hover:bg-white/30 dark:hover:bg-black/30 text-gray-700 dark:text-gray-300 backdrop-blur-sm'
               }`}
             >
               <ArrowLeftRight className="w-4 h-4" />
@@ -320,10 +320,10 @@ export function EdgeStylePopup({
         </div>
         
         {/* 删除按钮 */}
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-3 border-t border-white/20 dark:border-black/30">
           <button
             onClick={handleDelete}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-red-500/10 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-900/40 transition-colors backdrop-blur-sm"
           >
             <Trash2 className="w-4 h-4" />
             <span className="text-sm font-medium">删除连线</span>
@@ -331,8 +331,8 @@ export function EdgeStylePopup({
         </div>
       </div>
       
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+      <div className="mt-3 pt-3 border-t border-white/20 dark:border-black/30">
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
           点击外部或3秒后自动关闭
         </p>
       </div>

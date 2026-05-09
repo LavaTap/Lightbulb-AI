@@ -388,7 +388,7 @@ export function ModelSelector({ trigger }: ModelSelectorProps) {
               <div className="space-y-3">
                 {modelConfigs.map((config) => (
                   <Card key={config.id} className={cn(
-                    config.isActive && "border-green-500 bg-green-50/50 dark:bg-green-900/20"
+                    config.isActive && "border-green-500/50 bg-green-500/10 dark:bg-green-900/30"
                   )}>
                     <CardHeader className="py-3">
                       <CardTitle className="text-sm flex items-center justify-between">

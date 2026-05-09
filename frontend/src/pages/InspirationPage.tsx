@@ -118,11 +118,11 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
         {/* ===== Left Column: Control Panel (col-span-7) ===== */}
         <div className="lg:col-span-7 space-y-5">
           {/* Upload Section - Compact */}
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="w-5 h-5 text-primary-500" />
-                上传图片
+                <Sparkles className="w-5 h-5 text-primary-600" />
+                <span className="text-primary-700">上传图片</span>
               </CardTitle>
           <ModelDropdown
             category={['vision']}
@@ -140,7 +140,7 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
                 <Button
                   onClick={handleAnalyze}
                   disabled={images.length === 0 || isLoading}
-                  className="flex-1"
+                  className="flex-1 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-md hover:shadow-xl transition-all duration-200"
                 >
                   {isLoading ? (
                     <motion.div
@@ -160,11 +160,11 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
           </Card>
 
           {/* Category Selection */}
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="w-5 h-5 text-primary-500" />
-                选择分析类型
+                <Sparkles className="w-5 h-5 text-primary-600" />
+                <span className="text-primary-700">选择分析类型</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -225,7 +225,7 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
 
           {/* Error Message */}
           {error && (
-            <Card className="border-red-300 bg-red-50 dark:bg-red-900/20">
+            <Card className="glass border-red-300/50 bg-gradient-to-r from-red-500/15 to-red-600/10 dark:from-red-900/30 dark:to-red-800/20 backdrop-blur-lg">
               <CardContent className="p-4 text-red-600 dark:text-red-400">
                 {error}
               </CardContent>
@@ -240,12 +240,12 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
               className="space-y-5"
             >
               {/* AI 完整分析 */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-base">
                     <span className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-primary-500" />
-                      AI 完整分析
+                      <Sparkles className="w-5 h-5 text-primary-600" />
+                      <span className="text-primary-700">AI 完整分析</span>
                     </span>
                     <span className="text-sm font-normal text-green-600 dark:text-green-400 flex items-center gap-1">
                       ✨ 分析完成
@@ -292,9 +292,12 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
               </Card>
 
               {/* Prompt Display */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">提示词</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="w-5 h-5 text-primary-600" />
+                    <span className="text-primary-700">提示词</span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue={selectedCategory === 'character' ? 'benchmark' : 'zh'} className="w-full">
@@ -366,7 +369,7 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
         {/* ===== Right Column: Image Preview Panel (col-span-5) ===== */}
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-24 space-y-4">
-            <Card className="overflow-hidden min-h-[400px] lg:min-h-[600px]">
+            <Card className="glass-card overflow-hidden min-h-[400px] lg:min-h-[600px]">
               {images.length > 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 h-full flex flex-col">
                   <div className="flex items-center justify-between mb-3">
@@ -380,7 +383,7 @@ ${analysisSection ? `分析参考：${analysisSection}` : ''}`;
                       移除图片
                     </button>
                   </div>
-                  <div className="flex-1 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <div className="flex-1 rounded-xl overflow-hidden border border-gray-200/60 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md">
                     <img
                       src={`data:image/jpeg;base64,${images[0]}`}
                       alt="Uploaded preview"

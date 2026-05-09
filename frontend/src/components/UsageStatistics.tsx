@@ -93,14 +93,17 @@ export function UsageStatistics() {
           <div className="grid grid-cols-2 gap-4">
             <Card>
               <CardContent className="p-5 text-center">
-                <p className="text-sm text-gray-500 mb-2">生成次数</p>
+                <p className="text-sm text-gray-500 mb-2">总记录数</p>
                 <p className="text-3xl font-bold">{stats.totalRecords}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-5 text-center">
                 <p className="text-sm text-gray-500 mb-2">Token 用量</p>
-                <p className="text-3xl font-bold">{formatTokens(stats.totalTokens)}</p>
+                <p className="text-3xl font-bold">
+                  {formatTokens(stats.totalTokens)}
+                  <span className="text-base text-gray-400 ml-1">Tokens</span>
+                </p>
               </CardContent>
             </Card>
           </div>
