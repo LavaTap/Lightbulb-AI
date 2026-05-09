@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import {
   useNodesState,
   useEdgesState,
-  addEdge,
   type Node,
   type Edge,
   type Connection,
@@ -73,16 +72,20 @@ export function usePlanningState() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...connection,
-            type: 'smoothstep',
-            style: { stroke: '#8b5cf6', strokeWidth: 2 },
-          },
-          eds,
-        ),
-      );
+      const newEdgeId = `edge-${crypto.randomUUID()}`;
+      const newEdge: Edge = {
+        id: newEdgeId,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
+        type: 'planning-smoothstep',
+        data: { showArrow: false, arrowStart: false, arrowEnd: false },
+        style: { stroke: '#8b5cf6', strokeWidth: 2 },
+      };
+
+      setEdges((eds) => [...eds, newEdge]);
+      return newEdgeId;
     },
     [setEdges],
   );
@@ -90,14 +93,26 @@ export function usePlanningState() {
   const addTextNode = useCallback(
     (position?: { x: number; y: number }) => {
       const id = `text-${crypto.randomUUID()}`;
+      // 计算用户视图中心位置
+      const viewportCenter = {
+        x: -viewportRef.current.x / viewportRef.current.zoom,
+        y: -viewportRef.current.y / viewportRef.current.zoom,
+      };
+      
       const newNode: Node = {
         id,
         type: 'planningText',
-        position: position || {
-          x: -viewportRef.current.x / viewportRef.current.zoom + 200,
-          y: -viewportRef.current.y / viewportRef.current.zoom + 200,
+        position: position || viewportCenter,
+        data: { 
+          text: '双击编辑',
+          color: '#000000',
+          backgroundColor: '#ffffff',
+          fontSize: 14,
+          fontWeight: 'normal',
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          showBackground: false
         },
-        data: { text: '双击编辑' },
       };
       setNodes((nds) => [...nds, newNode]);
     },
@@ -107,14 +122,41 @@ export function usePlanningState() {
   const addImageNode = useCallback(
     (imageSrc: string, position?: { x: number; y: number }) => {
       const id = `image-${crypto.randomUUID()}`;
+      // 计算用户视图中心位置
+      const viewportCenter = {
+        x: -viewportRef.current.x / viewportRef.current.zoom,
+        y: -viewportRef.current.y / viewportRef.current.zoom,
+      };
+      
       const newNode: Node = {
         id,
         type: 'planningImage',
-        position: position || {
-          x: -viewportRef.current.x / viewportRef.current.zoom + 200,
-          y: -viewportRef.current.y / viewportRef.current.zoom + 200,
-        },
+        position: position || viewportCenter,
         data: { imageSrc, alt: 'Image' },
+      };
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes],
+  );
+
+  const addCodeNode = useCallback(
+    (code: string, language: string = 'javascript', position?: { x: number; y: number }) => {
+      const id = `code-${crypto.randomUUID()}`;
+      // 计算用户视图中心位置
+      const viewportCenter = {
+        x: -viewportRef.current.x / viewportRef.current.zoom,
+        y: -viewportRef.current.y / viewportRef.current.zoom,
+      };
+      
+      const newNode: Node = {
+        id,
+        type: 'planningCode',
+        position: position || viewportCenter,
+        data: { 
+          code: code || '// 在这里输入代码\nconsole.log("Hello, World!");',
+          language,
+          showLineNumbers: true
+        },
       };
       setNodes((nds) => [...nds, newNode]);
     },
@@ -142,6 +184,45 @@ export function usePlanningState() {
     viewportRef.current = viewport;
   }, []);
 
+  const updateEdgeStyle = useCallback((edgeId: string, updates: { type?: string; showArrow?: boolean; arrowStart?: boolean; arrowEnd?: boolean }) => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.id === edgeId) {
+          const updatedEdge = { ...edge };
+          if (updates.type) {
+            updatedEdge.type = updates.type;
+          }
+          if (updates.showArrow !== undefined) {
+            updatedEdge.data = { ...updatedEdge.data, showArrow: updates.showArrow };
+          }
+          if (updates.arrowStart !== undefined) {
+            updatedEdge.data = { ...updatedEdge.data, arrowStart: updates.arrowStart };
+          }
+          if (updates.arrowEnd !== undefined) {
+            updatedEdge.data = { ...updatedEdge.data, arrowEnd: updates.arrowEnd };
+          }
+          return updatedEdge;
+        }
+        return edge;
+      }),
+    );
+  }, [setEdges]);
+
+  const deleteEdge = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+  }, [setEdges]);
+
+  const updateImageZoom = useCallback((imageNodeId: string, zoomLevel: number) => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id === imageNodeId) {
+          return { ...n, data: { ...n.data, zoomLevel } };
+        }
+        return n;
+      }),
+    );
+  }, [setNodes]);
+
   return {
     nodes,
     edges,
@@ -154,8 +235,12 @@ export function usePlanningState() {
     onConnect,
     addTextNode,
     addImageNode,
+    addCodeNode,
     deleteSelected,
+    deleteEdge,
     updateNodeText,
+    updateEdgeStyle,
+    updateImageZoom,
     setViewport,
     viewportRef,
   };

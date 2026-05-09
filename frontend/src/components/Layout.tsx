@@ -29,10 +29,6 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
       <main className="flex-1">
         {children}
       </main>
-      
-      <footer className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        © 2026 Lightbulb AI - 巷子CHARM~
-      </footer>
 
       <Dialog open={recordsOpen} onOpenChange={setRecordsOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">

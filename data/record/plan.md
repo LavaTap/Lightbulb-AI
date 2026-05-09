@@ -1,115 +1,147 @@
-## 产品概述
+素材面板四项改进计划                
 
-对 Lightbulb AI 的「模型管理」弹窗进行功能优化，简化配置流程并完善已保存配置的管理能力。
+ Context
 
-## 核心功能需求
+ 用户对素材面板（PlanningPage）提出4项改进需求：
+ 1. 图片节点大小应根据实际图片尺寸自适应，而非固定240×180
+ 2. 框体和图片大小可调整（已有resize手柄，需与自适应尺寸配合）
+ 3. 连线规则：不能自连接，同一节点的4个Handle之间不能互连
+ 4. 连线样式选项：连接后弹出选项，可选smoothstep/贝塞尔曲线/直线，可选箭头
 
-1. **移除手动选择模型类型（模态）的步骤**: 在"添加新配置"表单中，不再要求用户手动选择模型类型（多模态/文生图/图生图），系统根据所选服务商和模型自动推断类型
-2. **保存前不强制测试连接**: 填写完配置信息后可直接点击"保存到模型管理"，不需要先通过"测试连接"
-3. **已保存配置列表完整展示与可删除**: "已保存配置"标签页展示所有保存的模型配置信息（名称、服务商、模型、类型等），每条配置支持删除操作
+ ---
+ 改动1: ImageNode 自适应图片尺寸
 
-## 技术栈
+ 文件: frontend/src/components/planning/nodes/ImageNode.tsx
 
-- **前端框架**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- **后端**: Node.js + Express + TypeScript + SQLite (sql.js)
-- **状态管理**: React hooks + localStorage + 后端 SQLite 持久化
+ 方案: 图片加载后获取 naturalWidth/naturalHeight，按比例缩放到合理范围（最大宽度1500px），设置初始尺寸。
 
-## 实现方案
+ - 移除固定 useState({ width: 240, height: 180 })
+ - 添加 onLoad 回调在 <img> 加载后读取 naturalWidth/naturalHeight
+ - 计算缩放：若宽度 > 1500 则等比缩放到 1500，否则用原始尺寸；最小宽度100px
+ - 用 useRef 标记是否已初始化尺寸，避免重复计算
+ - resize 逻辑不变，仍保持宽高比
 
-采用**自动推断替代手动选择**策略：移除表单中的"模型类型"Select组件，改为在用户选择模型时从 PROVIDERS 预定义数据中自动提取 category；对于自定义服务商的模型则默认使用 'vision'。后端将 modelConfigSchema 的 category 字段从必填改为可选，并在缺失时提供合理默认值。
+ 改动2: 调整框和图片大小
 
-### 关键修改点
+ 文件: frontend/src/components/planning/nodes/ImageNode.tsx
 
-#### 前端 ModelSelector.tsx
+ 已有resize手柄可正常工作，与改动1配合即可。无需额外代码。
 
-1. **移除"模型类型"选择 UI 块**（第407-435行）: 删除整个 Category Selection 的 Select 组件及其关联的 `<Label>模型类型</Label>`
-2. **保留 category 状态但改为内部自动推导**: `handleModelChange` 中已有的自动设置逻辑（第139-147行）继续生效；自定义模型输入时使用默认值 'vision'
-3. **handleSave 无需改动**: 当前已只检查 `configName/selectedProvider/model` 三个字段，不依赖 testResult，符合"不需测试连接即可保存"的要求
-4. **已保存配置列表无需大改**: 当前已有完整的列表渲染（第286-334行），包含名称、服务商、模型、类型展示和删除按钮，确认其正常工作即可
+ 改动3: 连线验证规则
 
-#### 后端 modelConfigs.ts
+ 文件: frontend/src/components/planning/PlanningCanvas.tsx, frontend/src/hooks/usePlanningState.ts
 
-1. **modelConfigSchema 的 category 字段改为可选**: 将 `z.string().min(1)` 改为 `z.string().optional()`，在保存时若未提供 category 则默认填充 'vision'
-2. **确保 DELETE 接口正常**: 已实现（第198-206行），验证无误
+ 规则:
+ - A: 源节点和目标节点不能是同一个节点（connection.source !== connection.target）
+ - B: 同一节点内的Handle不能互连（被规则A覆盖，React Flow默认也阻止）
 
-#### 数据流变化
+ 实现:
+ - 在 PlanningCanvas.tsx 中添加 isValidConnection 回调函数
+ - 传递给 <ReactFlow isValidConnection={isValidConnection}>
+ - isValidConnection 返回 false 如果 connection.source === connection.target
 
-```
-用户填写配置 → 选择模型 → 自动推断category(隐藏) → 直接点保存 → 写入数据库 → 列表刷新显示
-```
+ const isValidConnection = useCallback((connection: Connection) => {
+   return connection.source !== connection.target;
+ }, []);
 
-## 目录结构
+ 改动4: 连线样式选项（最复杂）
 
-```
-d:/Program Files (x86)/lightbulb-AI/
-├── frontend/src/components/
-│   └── ModelSelector.tsx        # [MODIFY] 移除模型类型选择UI，优化保存逻辑
-├── backend/src/routes/
-│   └── modelConfigs.ts          # [MODIFY] category字段改为可选
-└── frontend/src/types/
-    └── api.ts                   # [MODIFY] CreateModelConfigRequest.category改为可选
-```
+ 4a. 自定义边类型
 
-## 设计风格
+ 新文件: frontend/src/components/planning/edges/PlanningEdge.tsx
 
-保持现有项目的设计语言：现代 Glassmorphism 风格，渐变色主色调（蓝到靛蓝），圆角卡片布局，平滑过渡动画。
+ 创建3种自定义边组件，均支持可选箭头：
 
-## 页面设计变更说明
+ ┌─────────────────────┬─────────────────────┬──────────────────┐
+ │       边类型        │ React Flow path函数 │       说明       │
+ ├─────────────────────┼─────────────────────┼──────────────────┤
+ │ planning-smoothstep │ getSmoothStepPath   │ 折线（当前默认） │
+ ├─────────────────────┼─────────────────────┼──────────────────┤
+ │ planning-bezier     │ getBezierPath       │ 弹性曲线         │
+ ├─────────────────────┼─────────────────────┼──────────────────┤
+ │ planning-straight   │ getStraightPath     │ 直线             │
+ └─────────────────────┴─────────────────────┴──────────────────┘
 
-### 模型管理弹窗 - 添加新配置标签页
+ 每个边组件：
+ - 从 edge.data 读取 { showArrow: boolean }
+ - 使用 BaseEdge + 对应 path 函数渲染
+ - showArrow 为 true 时，在 path 末端绘制 SVG 箭头 marker
 
-**变更重点：移除"模型类型"选择区域，精简表单流程**
+ 4b. 连线后弹出样式面板
 
-#### 区块1: 表单标题区（不变）
+ 新文件: frontend/src/components/planning/EdgeStylePopup.tsx
 
-- 保留"添加新配置"标签页标题
+ - 浮动面板，定位在新建边的中间点附近
+ - 选项：
+   - 线型切换：smoothstep / bezier / straight（3个图标按钮）
+   - 箭头开关：toggle 按钮
+ - 选择后立即更新对应边的 type 和 data.showArrow
+ - 点击面板外区域或3秒无操作自动关闭
 
-#### 区块2: 配置名称输入（不变）
+ 4c. 边数据结构扩展
 
-- 配置名称文本输入框，placeholder "例如：我的GPT-4o配置"
+ 文件: frontend/src/types/planning.ts
 
-#### 区块3: 服务商下拉选择（不变）
+ export type PlanningEdgeData = {
+   showArrow?: boolean;
+ };
 
-- 支持选择 OpenAI / Google Gemini / DeepSeek / 讯飞 / 自定义
+ 4d. onConnect 修改
 
-#### 区块4: API Key 输入（不变）
+ 文件: frontend/src/hooks/usePlanningState.ts
 
-- 密码模式输入框
+ - onConnect 创建边时设置默认 type: 'planning-smoothstep' 和 data: { showArrow: false }
+ - 记录新建边的 ID，通过返回值或回调通知 PlanningPage 显示 EdgeStylePopup
 
-#### 区块5: 模型选择（不变）
+ 4e. PlanningPage 集成
 
-- 非自定义服务商：下拉选择预定义模型（含名称和描述）
-- 自定义服务商：文本输入框自由输入模型名
+ 文件: frontend/src/pages/PlanningPage.tsx
 
-#### ~~区块6: 模型类型选择~~ **【移除】**
+ - 注册自定义边类型：const edgeTypes = { 'planning-smoothstep': ..., 'planning-bezier': ..., 'planning-straight': ... }
+ - 传递给 <PlanningCanvas edgeTypes={edgeTypes}>
+ - 管理 EdgeStylePopup 的显示/隐藏状态
+ - 点击边也可重新打开样式面板（通过 onEdgeClick 回调）
 
-- 删除原来的"模型类型"三选一下拉框（多模态/文生图/图生图）
-- 类型由系统后台根据选择的模型自动判定，对用户透明
+ 4f. PlanningCanvas 修改
 
-#### 区块7: 使用代理开关（不变）
+ 文件: frontend/src/components/planning/PlanningCanvas.tsx
 
-- Switch 开关控制代理启用状态
+ - 接收 edgeTypes prop
+ - 接收 isValidConnection prop
+ - 添加 onEdgeClick 回调
+ - 更新 defaultEdgeOptions.type 为 'planning-smoothstep'
 
-#### 区块8: 代理地址/端点地址（条件显示，不变）
+ ---
+ 修改文件清单
 
-#### 区块9: 测试结果提示区（不变）
+ ┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┐
+ │                          文件                           │                         操作                         │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/components/planning/nodes/ImageNode.tsx    │ 修改：自适应图片尺寸                                 │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/components/planning/PlanningCanvas.tsx     │ 修改：添加 isValidConnection、edgeTypes、onEdgeClick │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/hooks/usePlanningState.ts                  │ 修改：onConnect 返回新边ID、updateEdgeStyle 方法     │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/pages/PlanningPage.tsx                     │ 修改：集成 edgeTypes、EdgeStylePopup、边样式更新逻辑 │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/types/planning.ts                          │ 修改：添加 PlanningEdgeData 类型                     │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/components/planning/edges/PlanningEdge.tsx │ 新建：自定义边组件（3种线型+箭头）                   │
+ ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+ │ frontend/src/components/planning/EdgeStylePopup.tsx     │ 新建：边样式弹出面板                                 │
+ └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────┘
 
-- 测试连接 / Vision检测结果的条件展示
+ ---
+ 验证方法
 
-#### 区块10: 操作按钮组（调整按钮可用性）
-
-- "测试连接" 按钮：可选操作，不影响保存
-- "检测Vision能力" 按钮：可选操作，不影响保存  
-- **"保存到模型管理" 主按钮**：只要填写了配置名称+服务商+模型即可点击（不再有任何前置条件限制）
-
-### 模型管理弹窗 - 已保存配置标签页（微调增强）
-
-#### 列表卡片设计（已有，确认完善）
-
-每张配置卡片包含：
-
-- **标题行**: 配置名称 + "使用中"激活标签（绿色圆角徽章）
-- **操作行右侧**: 删除按钮（红色警告色，Trash2图标）
-- **信息行**: 服务商名称 | 模型ID | 自动判定的类型标签（多模态/文生图/图生图）
-- **激活态视觉反馈**: 当前使用的配置卡片显示绿色边框 + 淡绿色背景
-- **空态提示**: 当无配置时显示居中空状态插画和引导文字
+ 1. 启动前端 cd frontend && npm run dev
+ 2. 进入素材面板页面
+ 3. 验证自适应尺寸：添加不同尺寸的图片（宽图/窄图/大图/小图），确认节点大小跟随图片自适应
+ 4. 验证resize：拖拽图片节点右下角手柄，确认宽高比保持、尺寸可调
+ 5. 验证连线规则：尝试从同一节点的Handle连到自身，确认被阻止
+ 6. 验证边样式：
+   - 连接两个节点后，确认弹出样式面板
+   - 切换线型（smoothstep/bezier/straight），确认线条变化
+   - 开启箭头，确认箭头出现
+   - 点击已有边，确认可重新编辑样式
