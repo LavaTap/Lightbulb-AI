@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowRight, Minus, Zap, Move, ArrowLeft, Trash2, GripVertical } from 'lucide-react';
+import { ArrowRight, Minus, Zap, Move, ArrowLeft, Trash2, GripVertical, ArrowLeftRight } from 'lucide-react';
 
 interface EdgeStylePopupProps {
   edgeId: string;
@@ -17,7 +17,7 @@ export function EdgeStylePopup({
   edgeId,
   position,
   currentType,
-  currentShowArrow,
+  currentShowArrow: _currentShowArrow,
   currentArrowStart = false,
   currentArrowEnd = false,
   onUpdate,
@@ -74,19 +74,18 @@ export function EdgeStylePopup({
     resetCloseTimer();
   }, [edgeId, onUpdate, resetCloseTimer]);
 
-  const handleArrowStartToggle = useCallback(() => {
-    const newArrowStart = !arrowStart;
-    setArrowStart(newArrowStart);
-    onUpdate(edgeId, { arrowStart: newArrowStart });
-    resetCloseTimer();
-  }, [edgeId, arrowStart, onUpdate, resetCloseTimer]);
 
-  const handleArrowEndToggle = useCallback(() => {
-    const newArrowEnd = !arrowEnd;
+
+
+
+  const handleReverseArrows = useCallback(() => {
+    const newArrowStart = arrowEnd;
+    const newArrowEnd = arrowStart;
+    setArrowStart(newArrowStart);
     setArrowEnd(newArrowEnd);
-    onUpdate(edgeId, { arrowEnd: newArrowEnd });
+    onUpdate(edgeId, { arrowStart: newArrowStart, arrowEnd: newArrowEnd });
     resetCloseTimer();
-  }, [edgeId, arrowEnd, onUpdate, resetCloseTimer]);
+  }, [edgeId, arrowStart, arrowEnd, onUpdate, resetCloseTimer]);
 
   const handleDelete = useCallback(() => {
     onDelete(edgeId);
@@ -304,6 +303,18 @@ export function EdgeStylePopup({
                 <ArrowRight className="w-3 h-3" />
               </div>
               <span className="text-xs mt-1">双向</span>
+            </button>
+            {/* 反转箭头 */}
+            <button
+              onClick={handleReverseArrows}
+              className={`flex-1 flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
+                arrowStart !== arrowEnd
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span className="text-xs mt-1">反转</span>
             </button>
           </div>
         </div>

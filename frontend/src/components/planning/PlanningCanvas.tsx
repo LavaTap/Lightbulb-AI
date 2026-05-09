@@ -13,13 +13,25 @@ import {
   type Viewport,
   type OnMoveEnd,
   type NodeTypes,
+  type EdgeTypes,
 } from '@xyflow/react';
 import { TextNode } from './nodes/TextNode';
 import { ImageNode } from './nodes/ImageNode';
+import {
+  PlanningSmoothstepEdge,
+  PlanningBezierEdge,
+  PlanningStraightEdge,
+} from './edges/PlanningEdge';
 
 const nodeTypes: NodeTypes = {
   planningText: TextNode,
   planningImage: ImageNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  'planning-smoothstep': PlanningSmoothstepEdge,
+  'planning-bezier': PlanningBezierEdge,
+  'planning-straight': PlanningStraightEdge,
 };
 
 interface PlanningCanvasProps {
@@ -31,6 +43,7 @@ interface PlanningCanvasProps {
   onMoveEnd: OnMoveEnd;
   initialViewport?: Viewport;
   scrollToPan?: boolean;
+  onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void;
 }
 
 export function PlanningCanvas({
@@ -42,11 +55,12 @@ export function PlanningCanvas({
   onMoveEnd,
   initialViewport,
   scrollToPan = false,
+  onEdgeClick,
 }: PlanningCanvasProps) {
   const reactFlowRef = useRef<HTMLDivElement>(null);
 
   const defaultEdgeOptions = {
-    type: 'smoothstep' as const,
+    type: 'planning-smoothstep' as const,
     style: { stroke: '#8b5cf6', strokeWidth: 2 },
     animated: false,
   };
@@ -76,7 +90,9 @@ export function PlanningCanvas({
         onConnect={onConnect}
         onInit={handleInit}
         onMoveEnd={onMoveEnd}
+        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineStyle={connectionLineStyle}
         snapToGrid={true}

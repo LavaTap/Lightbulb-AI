@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Type, ImagePlus, Trash2, Maximize2, ZoomIn, ZoomOut, Code, Pencil } from 'lucide-react';
+import { Type, ImagePlus, Trash2, Maximize2, ZoomIn, ZoomOut, Code, Pencil, MousePointer2 } from 'lucide-react';
 
 interface PlanningToolbarProps {
   onAddTextNode: () => void;
@@ -11,6 +11,8 @@ interface PlanningToolbarProps {
   onZoomOut: () => void;
   onToggleDrawMode?: () => void;
   isDrawMode?: boolean;
+  onToggleScrollPan?: () => void;
+  isScrollPan?: boolean;
   selectedImageNode?: { id: string; zoomLevel: number } | null;
   onUpdateImageZoom?: (zoomLevel: number) => void;
 }
@@ -25,6 +27,8 @@ export function PlanningToolbar({
   onZoomOut,
   onToggleDrawMode,
   isDrawMode,
+  onToggleScrollPan,
+  isScrollPan,
   selectedImageNode,
   onUpdateImageZoom,
 }: PlanningToolbarProps) {
@@ -93,6 +97,16 @@ export function PlanningToolbar({
         label={isDrawMode ? "退出画笔" : "画笔"}
         onClick={onToggleDrawMode}
         active={isDrawMode}
+      />
+
+      <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+      {/* 滚动平移 - 锁定缩放，滚轮滚动画布 */}
+      <ToolbarButton
+        icon={<MousePointer2 className="w-4 h-4" />}
+        label={isScrollPan ? "关闭滚动平移" : "滚动平移"}
+        onClick={onToggleScrollPan}
+        active={isScrollPan}
       />
 
       {/* 只在选中图片时显示缩放滑动条 */}
