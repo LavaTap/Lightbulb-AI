@@ -144,6 +144,7 @@ function PlanningPageInner() {
         onEdgeClick={handleEdgeClick}
         initialViewport={viewportRef.current}
         scrollToPan={scrollToPan}
+        onAddImageNode={addImageNode}
       />
 
       {showEdgePopup && currentEdge && (

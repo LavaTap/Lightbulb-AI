@@ -304,7 +304,7 @@ export function ChatPage() {
           }}
           transition={{ duration: 0.25, ease: 'easeInOut' }}
           className={cn(
-            sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-9'
+            sidebarCollapsed ? 'lg:col-span-12 col-start-1' : 'lg:col-span-9'
           )}
         >
           <Card className="h-full flex flex-col">
