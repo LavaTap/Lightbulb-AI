@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Type, ImagePlus, Trash2, Maximize2, ZoomIn, ZoomOut, Code, Pencil, MousePointer2 } from 'lucide-react';
+import { Type, ImagePlus, Trash2, Maximize2, ZoomIn, ZoomOut, Code, Pencil } from 'lucide-react';
 
 interface PlanningToolbarProps {
   onAddTextNode: () => void;
@@ -11,8 +11,6 @@ interface PlanningToolbarProps {
   onZoomOut: () => void;
   onToggleDrawMode?: () => void;
   isDrawMode?: boolean;
-  onToggleZoomLock?: () => void;
-  isZoomLocked?: boolean;
   selectedImageNode?: { id: string; zoomLevel: number } | null;
   onUpdateImageZoom?: (zoomLevel: number) => void;
 }
@@ -27,8 +25,6 @@ export function PlanningToolbar({
   onZoomOut,
   onToggleDrawMode,
   isDrawMode,
-  onToggleZoomLock,
-  isZoomLocked,
   selectedImageNode,
   onUpdateImageZoom,
 }: PlanningToolbarProps) {
@@ -95,18 +91,8 @@ export function PlanningToolbar({
       <ToolbarButton
         icon={<Pencil className="w-4 h-4" />}
         label={isDrawMode ? "退出画笔" : "画笔"}
-        onClick={() => onToggleDrawMode?.()}
+        onClick={onToggleDrawMode}
         active={isDrawMode}
-      />
-
-      <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-      
-      {/* 滚轮缩放开关 - 画笔模式下冻结缩放，点击后启用 */}
-      <ToolbarButton
-        icon={<MousePointer2 className="w-4 h-4" />}
-        label={isZoomLocked ? "关闭滚轮缩放" : "滚轮缩放"}
-        onClick={() => onToggleZoomLock?.()}
-        active={isZoomLocked}
       />
 
       {/* 只在选中图片时显示缩放滑动条 */}
