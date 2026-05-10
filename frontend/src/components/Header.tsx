@@ -13,6 +13,8 @@ interface HeaderProps {
   activeTab: FeatureType;
   onTabChange: (tab: FeatureType) => void;
   onOpenRecords: () => void;
+  onOpenMaterials: () => void;
+  onOpenStatistics: () => void;
 }
 
 const TABS: { id: FeatureType; label: string }[] = [
@@ -23,9 +25,11 @@ const TABS: { id: FeatureType; label: string }[] = [
   { id: 'poster', label: '海报生成' },
   { id: 'cg', label: 'CG生成' },
   { id: 'planning', label: '计划面板' },
+  { id: 'materials', label: '我的素材' },
+  { id: 'statistics', label: '用量统计' },
 ];
 
-export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
+export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials, onOpenStatistics }: HeaderProps) {
   const headerRef = useRef<HTMLElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -63,7 +67,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
         <nav className="hidden md:flex items-center gap-1">
           {TABS.map((tab) => {
             // 处理生图子菜单
-            if (['character', 'threeview', 'poster', 'cg'].includes(tab.id)) {
+            if (['character', 'threeview', 'poster', 'cg', 'materials', 'statistics'].includes(tab.id)) {
               return null;
             }
             return (
@@ -152,7 +156,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[140px]">
               {TABS.map((tab) => {
-                if (['character', 'threeview', 'poster', 'cg'].includes(tab.id)) {
+                if (['character', 'threeview', 'poster', 'cg', 'materials', 'statistics'].includes(tab.id)) {
                   return null;
                 }
                 return (
@@ -182,7 +186,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords }: HeaderProps) {
         </div>
 
         {/* Actions */}
-        <AvatarMenu onOpenRecords={onOpenRecords} />
+        <AvatarMenu onOpenRecords={onOpenRecords} onOpenMaterials={onOpenMaterials} onOpenStatistics={onOpenStatistics} />
       </div>
     </header>
   );

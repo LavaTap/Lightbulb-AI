@@ -3,11 +3,17 @@ import { chatApi } from '@/services/api';
 import { useApiConfig } from './useApiConfig';
 import type { Conversation, ChatMessage, MessageAttachment, APIConfig } from '@/types/index';
 
+export interface ThinkingStatus {
+  status: 'preparing' | 'thinking' | 'retrying' | 'completed' | 'error';
+  message: string;
+}
+
 export function useChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<ThinkingStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,7 +142,7 @@ export function useChat() {
     setMessages(prev => [...prev, assistantPlaceholder]);
 
     try {
-      const response = await chatApi.sendMessage(activeConversation.id, content, config, attachments);
+      const response = await chatApi.sendMessage(activeConversation.id, content, config, attachments, abortController.signal);
 
       if (!response.ok || !response.body) throw new Error('Stream failed');
 
@@ -170,7 +176,13 @@ export function useChat() {
           try {
             const data = JSON.parse(dataStr);
 
-            if (eventType === 'warning' && data.type === 'multimodal_not_supported') {
+            if (eventType === 'thinking') {
+              // 更新思考状态
+              setThinkingStatus({
+                status: data.status || 'thinking',
+                message: data.message || 'AI 正在思考...'
+              });
+            } else if (eventType === 'warning' && data.type === 'multimodal_not_supported') {
               multimodalWarningShown = true;
               // 更新用户消息，移除附件
               setMessages(prev => {
@@ -222,6 +234,8 @@ export function useChat() {
       }
     } finally {
       setIsStreaming(false);
+      // 清空思考状态
+      setThinkingStatus(null);
       abortRef.current = null;
       // 延迟刷新对话信息，等待后端 AI 生成新标题
       if (activeConversation) {
@@ -255,6 +269,7 @@ export function useChat() {
     activeConversation,
     messages,
     isStreaming,
+    thinkingStatus,
     isLoading,
     error,
     loadConversations,

@@ -24,6 +24,8 @@ export function Layout({ children, activeTab, onTabChange }: LayoutProps) {
         activeTab={activeTab}
         onTabChange={onTabChange}
         onOpenRecords={() => setRecordsOpen(true)}
+        onOpenMaterials={() => onTabChange('materials')}
+        onOpenStatistics={() => onTabChange('statistics')}
       />
       
       <main className="flex-1">

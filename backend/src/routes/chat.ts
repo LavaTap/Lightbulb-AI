@@ -279,6 +279,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
+    // 发送思考状态事件（AI 正在准备请求）
+    res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'preparing', message: '正在准备请求...' })}\n\n`);
+
     // 发送开始事件
     res.write(`event: message_start\ndata: ${JSON.stringify({ conversationId })}\n\n`);
 
@@ -286,9 +289,24 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     let totalTokenUsage = 0;
 
     try {
-      const stream = chatCompletionStream(messages, config);
+      // 创建 abort 控制器以处理客户端中断请求
+      const abortController = new AbortController();
+      req.on('abort', () => {
+        console.log('[ChatRoute] Client aborted the request');
+        abortController.abort();
+      });
+
+      // 发送准备完成事件（AI 正在思考）
+      res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'thinking', message: 'AI 正在思考...' })}\n\n`);
+
+      const stream = chatCompletionStream(messages, config, { signal: abortController.signal });
 
       for await (const chunk of stream) {
+        // 检查请求是否已中止
+        if (res.headersSent && res.writableEnded) {
+          break;
+        }
+
         if (chunk.delta) {
           fullContent += chunk.delta;
           res.write(`event: delta\ndata: ${JSON.stringify({ content: chunk.delta })}\n\n`);
@@ -298,6 +316,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
           res.write(`event: usage\ndata: ${JSON.stringify(chunk.usage)}\n\n`);
         }
       }
+
+      // 发送生成完成事件
+      res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'completed', message: '生成完成' })}\n\n`);
 
       // 保存助手消息
       const messageId = await createMessage({
@@ -321,6 +342,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
     } catch (streamError) {
       console.error('[ChatRoute] Stream error:', streamError);
+
+      // 发送错误状态事件
+      res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'error', message: extractErrorMessage(streamError) })}\n\n`);
 
       // 检测是否为模型不支持多模态内容（图片/视频）的错误
       const errMsg = extractErrorMessage(streamError);
@@ -347,8 +371,17 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
         }));
 
         try {
-          const retryStream = chatCompletionStream(textOnlyMessages, config);
+          const retryStream = chatCompletionStream(textOnlyMessages, config, { signal: abortController.signal });
+
+          // 发送重试准备事件
+          res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'retrying', message: '重试请求...' })}\n\n`);
+
           for await (const chunk of retryStream) {
+            // 检查请求是否已中止
+            if (res.headersSent && res.writableEnded) {
+              break;
+            }
+
             if (chunk.delta) {
               fullContent += chunk.delta;
               res.write(`event: delta\ndata: ${JSON.stringify({ content: chunk.delta })}\n\n`);
@@ -358,6 +391,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
               res.write(`event: usage\ndata: ${JSON.stringify(chunk.usage)}\n\n`);
             }
           }
+
+          // 发送重试完成事件
+          res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'completed', message: '生成完成' })}\n\n`);
 
           const messageId = await createMessage({
             conversation_id: conversationId,
@@ -391,6 +427,16 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     res.end();
 
   } catch (error) {
+    console.error('[ChatRoute] Unhandled error:', error);
+    // 发送最终错误事件
+    try {
+      if (res.headersSent && !res.writableEnded) {
+        res.write(`event: thinking\ndata: ${JSON.stringify({ status: 'error', message: extractErrorMessage(error) })}\n\n`);
+        res.write(`event: error\ndata: ${JSON.stringify({ error: extractErrorMessage(error) })}\n\n`);
+      }
+    } catch (e) {
+      // 忽略响应已关闭的错误
+    }
     if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
     } else {

@@ -151,7 +151,7 @@ export const chatApi = {
   },
 
   // SSE streaming - 使用原生 fetch，因为 axios 不支持流式响应
-  sendMessage: async (conversationId: number, content: string, config: APIConfig, attachments?: MessageAttachment[]): Promise<Response> => {
+  sendMessage: async (conversationId: number, content: string, config: APIConfig, attachments?: MessageAttachment[], signal?: AbortSignal): Promise<Response> => {
     const body: any = { content, config };
     if (attachments && attachments.length > 0) {
       body.attachments = attachments;
@@ -160,6 +160,7 @@ export const chatApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal,
     });
   },
 

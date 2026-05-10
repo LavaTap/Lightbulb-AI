@@ -69,7 +69,7 @@ export async function chatCompletion(
 export async function* chatCompletionStream(
   messages: ChatMessage[],
   config: APIConfig,
-  options?: { maxTokens?: number; temperature?: number }
+  options?: { maxTokens?: number; temperature?: number, signal?: AbortSignal }
 ): AsyncGenerator<{ delta: string | null; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
   console.log('========== Chat Completion Stream ==========');
   console.log(`Model: ${config.model}, Messages: ${messages.length}`);
@@ -87,6 +87,7 @@ export async function* chatCompletionStream(
     temperature: options?.temperature ?? 0.7,
     stream: true,
     stream_options: { include_usage: true },
+    signal: options?.signal,
   });
 
   for await (const chunk of stream) {

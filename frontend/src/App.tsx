@@ -8,6 +8,8 @@ import { ThreeViewPage } from '@/pages/ThreeViewPage';
 import { PosterGenPage } from '@/pages/PosterGenPage';
 import { CgGenPage } from '@/pages/CgGenPage';
 import { PlanningPage } from '@/pages/PlanningPage';
+import { MyMaterialsPage } from '@/pages/MyMaterialsPage';
+import { StatisticsPage } from '@/pages/StatisticsPage';
 import { useTheme } from '@/hooks/useTheme';
 import type { FeatureType } from '@/types';
 
@@ -31,6 +33,10 @@ function App() {
         return <CgGenPage />;
       case 'planning':
         return <PlanningPage />;
+      case 'materials':
+        return <MyMaterialsPage />;
+      case 'statistics':
+        return <StatisticsPage />;
       default:
         return <InspirationPage />;
     }

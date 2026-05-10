@@ -57,6 +57,7 @@ export function ChatPage() {
     activeConversation,
     messages,
     isStreaming,
+    thinkingStatus,
     error,
     loadConversations,
     createConversation,
@@ -367,12 +368,19 @@ export function ChatPage() {
                     ))}
                   </AnimatePresence>
 
-                  {/* 流式输出时的光标 */}
-                  {isStreaming &&
-                    messages.length > 0 &&
-                    messages[messages.length - 1].role === "assistant" && (
-                      <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
-                    )}
+                  {/* AI 思考动画和状态 */}
+                  {isStreaming && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span>
+                        {thinkingStatus?.message || (messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? '正在生成回复...' : 'AI 正在思考...')}
+                      </span>
+                    </div>
+                  )}
 
                   <div ref={messagesEndRef} />
                 </div>

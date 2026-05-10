@@ -17,6 +17,9 @@ export function ImageNode({ id, selected, data }: NodeProps) {
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
+  // 最小尺寸阈值，小于此尺寸时工具栏自动折叠且无法展开
+  const MIN_SIZE_TO_EXPAND = { width: 150, height: 100 };
+
   const initializedRef = useRef(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -32,6 +35,13 @@ export function ImageNode({ id, selected, data }: NodeProps) {
       handleZoom(externalZoom);
     }
   }, [data]);
+
+  // 监听尺寸变化，当尺寸小于阈值时自动折叠工具栏
+  useEffect(() => {
+    if (size.width < MIN_SIZE_TO_EXPAND.width || size.height < MIN_SIZE_TO_EXPAND.height) {
+      setIsToolbarExpanded(false);
+    }
+  }, [size]);
 
   const { getNodes, setNodes, getNode } = useReactFlow();
 
@@ -287,6 +297,9 @@ export function ImageNode({ id, selected, data }: NodeProps) {
     }
   }, [showPanel]);
 
+  // 检查当前尺寸是否小于最小展开阈值
+  const isSizeTooSmall = size.width < MIN_SIZE_TO_EXPAND.width || size.height < MIN_SIZE_TO_EXPAND.height;
+
   return (
     <div 
       ref={nodeRef} 
@@ -326,8 +339,8 @@ export function ImageNode({ id, selected, data }: NodeProps) {
           <div className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             {/* 工具栏头部 - 点击可收缩 */}
             <div
-              className="flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-white/20 dark:hover:bg-black/20 transition-colors"
-              onClick={() => setIsToolbarExpanded(false)}
+              className={`flex items-center justify-between px-3 py-1.5 transition-colors ${isSizeTooSmall ? 'cursor-default' : 'cursor-pointer hover:bg-white/20 dark:hover:bg-black/20'}`}
+              onClick={() => !isSizeTooSmall && setIsToolbarExpanded(false)}
             >
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">图片</span>
@@ -396,9 +409,9 @@ export function ImageNode({ id, selected, data }: NodeProps) {
         ) : (
           /* 收缩状态 - 只显示展开按钮 */
           <div
-            className="bg-white/10 dark:bg-black/10 border-b border-white/20 dark:border-black/30 px-3 py-1 cursor-pointer hover:bg-white/20 dark:hover:bg-black/20 transition-colors flex items-center justify-center"
-            onClick={() => setIsToolbarExpanded(true)}
-            title="展开工具栏"
+            className={`bg-white/10 dark:bg-black/10 border-b border-white/20 dark:border-black/30 px-3 py-1 transition-colors flex items-center justify-center ${isSizeTooSmall ? 'cursor-default' : 'cursor-pointer hover:bg-white/20 dark:hover:bg-black/20'}`}
+            onClick={() => !isSizeTooSmall && setIsToolbarExpanded(true)}
+            title={isSizeTooSmall ? "尺寸过小，无法展开" : "展开工具栏"}
           >
             <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </div>

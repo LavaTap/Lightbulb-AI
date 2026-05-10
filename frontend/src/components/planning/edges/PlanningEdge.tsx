@@ -68,7 +68,7 @@ export function PlanningEdge({
               markerHeight="7"
               refX="1"
               refY="3.5"
-              orient="auto-start-reverse"
+              orient="auto"
               markerUnits="strokeWidth"
             >
               <polygon
