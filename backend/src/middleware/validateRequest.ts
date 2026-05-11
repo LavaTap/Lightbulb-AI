@@ -48,10 +48,7 @@ export const generatePosterSchema = z.object({
 export const generateStoryboardSchema = z.object({
   characterImages: z.array(z.string()),
   sceneImage: z.string().optional(),
-  themePrompt: z.string().min(1, '题材设定不能为空'),
-  abilityPrompt: z.string().min(1, '人物能力不能为空'),
-  combatPrompt: z.string().min(1, '对战逻辑不能为空'),
-  atmospherePrompt: z.string().min(1, '环境氛围不能为空'),
+  prompt: z.string().min(1, '分镜描述不能为空'),
   config: z.object({
     provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
     model: z.string().min(1),
@@ -60,6 +57,20 @@ export const generateStoryboardSchema = z.object({
     useProxy: z.boolean().optional(),
     proxyEndpoint: z.string().optional(),
   }),
+});
+
+export const generateStoryboardPromptSchema = z.object({
+  text: z.string().min(1, '需求文本不能为空'),
+  config: z.object({
+    provider: z.enum(['openai', 'google', 'deepseek', 'xfyun', 'aliyun', 'bytedance', 'baidu', 'tencent', 'gptimage2', 'custom']),
+    model: z.string().min(1),
+    endpoint: z.string().optional(),
+    apiKey: z.string().min(1),
+    useProxy: z.boolean().optional(),
+    proxyEndpoint: z.string().optional(),
+  }),
+  template: z.enum(['scene', 'random', 'adaptive']),
+  mode: z.enum(['dialogue', 'battle']),
 });
 
 export const createRecordSchema = z.object({

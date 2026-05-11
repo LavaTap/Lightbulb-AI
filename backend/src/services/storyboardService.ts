@@ -5,10 +5,7 @@ import type { APIConfig } from '../types/index.js';
 export async function generateStoryboard(
   characterImages: string[],
   sceneImage: string | undefined,
-  themePrompt: string,
-  abilityPrompt: string,
-  combatPrompt: string,
-  atmospherePrompt: string,
+  userPrompt: string,
   config: APIConfig
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   console.log('\n========== Storyboard Generation Start ==========');
@@ -44,10 +41,7 @@ export async function generateStoryboard(
 Create a 16:9 ratio 3×3 nine-grid storyboard that fully depicts a complete battle between two characters.
 
 User Settings:
-Theme: ${themePrompt}
-Character abilities: ${abilityPrompt}
-Battle process: ${combatPrompt}
-Atmosphere: ${atmospherePrompt}
+${userPrompt}
 ${characterAnalysis}
 ${sceneAnalysis}
 

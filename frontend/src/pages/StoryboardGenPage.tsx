@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { ImageUploadZone } from '@/components/ImageUploadZone';
 import { ModelDropdown } from '@/components/ModelDropdown';
 import { useGeneration } from '@/hooks/useGeneration';
@@ -15,10 +14,7 @@ import { base64ToDataUrl } from '@/lib/utils';
 export function StoryboardGenPage() {
   const [characterImages, setCharacterImages] = useState<string[]>([]);
   const [sceneImage, setSceneImage] = useState<string[]>([]);
-  const [themePrompt, setThemePrompt] = useState('');
-  const [abilityPrompt, setAbilityPrompt] = useState('');
-  const [combatPrompt, setCombatPrompt] = useState('');
-  const [atmospherePrompt, setAtmospherePrompt] = useState('');
+  const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('wanx');
   const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
@@ -26,12 +22,12 @@ export function StoryboardGenPage() {
   const { isLoading, error, generateStoryboard } = useGeneration();
 
   const handleGenerate = async () => {
-    if (!themePrompt.trim() || !abilityPrompt.trim() || !combatPrompt.trim() || !atmospherePrompt.trim()) return;
+    if (!prompt.trim()) return;
 
     try {
       const config = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : undefined;
       const scene = sceneImage.length > 0 ? sceneImage[0] : undefined;
-      const image = await generateStoryboard(characterImages, scene, themePrompt, abilityPrompt, combatPrompt, atmospherePrompt, config);
+      const image = await generateStoryboard(characterImages, scene, prompt, config);
       setGeneratedImage(image);
     } catch (e) {
       console.error(e);
@@ -45,16 +41,10 @@ export function StoryboardGenPage() {
     link.click();
   };
 
-  const handleModelChange = (modelId: string, modelConfig: ModelConfig) => {
+  const handleModelChange = (_modelId: string, modelConfig: ModelConfig) => {
     setSelectedModel(modelConfig.model);
     setSelectedModelConfig(modelConfig);
   };
-
-  const isGenerateDisabled = isLoading
-    || !themePrompt.trim()
-    || !abilityPrompt.trim()
-    || !combatPrompt.trim()
-    || !atmospherePrompt.trim();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -119,63 +109,31 @@ export function StoryboardGenPage() {
         </CardContent>
       </Card>
 
-      {/* Prompt Inputs - All Required */}
+      {/* Prompt Input - Single field */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
-            分镜设定
-            <span className="text-red-600 dark:text-red-400 text-xs font-normal">* 全部必填</span>
+            分镜描述
+            <span className="text-red-600 dark:text-red-400 text-xs font-normal">* 必填</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="theme">题材设定</Label>
-            <Textarea
-              id="theme"
-              value={themePrompt}
-              onChange={(e) => setThemePrompt(e.target.value)}
-              placeholder="例如：超级英雄都市对战，魔法少女对决怪物..."
-              className="min-h-[60px]"
-            />
-          </div>
+          <Textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder={`请完整描述你的分镜需求，例如：
 
-          <div className="space-y-2">
-            <Label htmlFor="ability">人物能力</Label>
-            <Textarea
-              id="ability"
-              value={abilityPrompt}
-              onChange={(e) => setAbilityPrompt(e.target.value)}
-              placeholder="描述双方角色的能力、招式、特征..."
-              className="min-h-[60px]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="combat">对战逻辑</Label>
-            <Textarea
-              id="combat"
-              value={combatPrompt}
-              onChange={(e) => setCombatPrompt(e.target.value)}
-              placeholder="描述从开局对峙到分出胜负的完整过程..."
-              className="min-h-[80px]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="atmosphere">环境氛围</Label>
-            <Textarea
-              id="atmosphere"
-              value={atmospherePrompt}
-              onChange={(e) => setAtmospherePrompt(e.target.value)}
-              placeholder="描述天气、光影、场景氛围，例如：雨夜都市，霓虹灯闪烁，暴雨倾盆..."
-              className="min-h-[60px]"
-            />
-          </div>
+题材设定：超级英雄都市对战
+人物能力：主角操控雷电飞行，反派力量型近战
+对战逻辑：开局空中对峙→电光突进→近身肉搏→大招对轰→主角险胜
+环境氛围：夜晚赛博朋克城市，霓虹灯蓝紫调，暴雨闪电`}
+            className="min-h-[150px] resize-y"
+          />
 
           <div className="flex justify-end">
             <Button
               onClick={handleGenerate}
-              disabled={isGenerateDisabled}
+              disabled={isLoading || !prompt.trim()}
               className="bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-lg shadow-primary-500/20"
             >
               {isLoading ? (
@@ -198,8 +156,15 @@ export function StoryboardGenPage() {
       {/* Error Message */}
       {error && (
         <Card className="glass border-red-300/60 bg-gradient-to-r from-red-500/15 to-red-600/10 dark:from-red-900/30 dark:to-red-800/20 backdrop-blur-lg">
-          <CardContent className="p-4 text-red-700 dark:text-red-300">
-            {error}
+          <CardContent>
+            <p className="text-red-700 dark:text-red-300 font-medium text-sm">
+              {error.includes('404') ? '请求地址不存在，请联系开发者检查 API 路径配置' : error}
+            </p>
+            {error.includes('404') && (
+              <p className="text-red-500/70 dark:text-red-400/70 text-xs mt-1">
+                若问题持续，请尝试切换其他模型或刷新页面后重试
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

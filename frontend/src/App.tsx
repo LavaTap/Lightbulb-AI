@@ -7,6 +7,7 @@ import { CharacterGenPage } from '@/pages/CharacterGenPage';
 import { ThreeViewPage } from '@/pages/ThreeViewPage';
 import { PosterGenPage } from '@/pages/PosterGenPage';
 import { StoryboardGenPage } from '@/pages/StoryboardGenPage';
+import { StoryboardPromptPage } from '@/pages/StoryboardPromptPage';
 import { CgGenPage } from '@/pages/CgGenPage';
 import { PlanningPage } from '@/pages/PlanningPage';
 import { MyMaterialsPage } from '@/pages/MyMaterialsPage';
@@ -32,6 +33,8 @@ function App() {
         return <PosterGenPage />;
       case 'storyboard':
         return <StoryboardGenPage />;
+      case 'storyboard-prompt':
+        return <StoryboardPromptPage />;
       case 'cg':
         return <CgGenPage />;
       case 'planning':

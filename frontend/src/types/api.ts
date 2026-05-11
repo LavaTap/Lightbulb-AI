@@ -43,16 +43,33 @@ export interface GeneratePosterResponse {
 export interface GenerateStoryboardRequest {
   characterImages: string[];
   sceneImage?: string;
-  themePrompt: string;
-  abilityPrompt: string;
-  combatPrompt: string;
-  atmospherePrompt: string;
+  prompt: string;
   config: APIConfig;
 }
 
 export interface GenerateStoryboardResponse {
   success: boolean;
   data: { imageBase64: string };
+  tokenUsage: number;
+}
+
+export type StoryboardPromptMode = 'dialogue' | 'battle';
+export type StoryboardTemplate = 'scene' | 'random' | 'adaptive';
+
+export interface GenerateStoryboardPromptRequest {
+  text: string;
+  config: APIConfig;
+  template: StoryboardTemplate;
+  mode: StoryboardPromptMode;
+}
+
+export interface GenerateStoryboardPromptResponse {
+  success: boolean;
+  data: {
+    scenePrompt: string;
+    randomStoryboardPrompt: string;
+    adaptiveStoryboardPrompt: string;
+  };
   tokenUsage: number;
 }
 

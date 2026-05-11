@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { analyzeSchema, generateImageSchema, generatePosterSchema, generateStoryboardSchema } from '../middleware/validateRequest.js';
+import { analyzeSchema, generateImageSchema, generatePosterSchema, generateStoryboardSchema, generateStoryboardPromptSchema } from '../middleware/validateRequest.js';
 import { analyzeImage } from '../services/visionService.js';
 import { generateImage } from '../services/imageGenService.js';
 import { generatePoster } from '../services/posterService.js';
 import { generateStoryboard } from '../services/storyboardService.js';
+import { generateStoryboardPrompt } from '../services/storyboardPromptService.js';
 import { ZodError } from 'zod';
 import type { APIConfig } from '../types/index.js';
 
@@ -183,7 +184,7 @@ router.post('/poster/generate', async (req: Request, res: Response) => {
 // Storyboard generate endpoint
 router.post('/storyboard/generate', async (req: Request, res: Response) => {
   try {
-    const { characterImages, sceneImage, themePrompt, abilityPrompt, combatPrompt, atmospherePrompt, config: rawConfig } = generateStoryboardSchema.parse(req.body);
+    const { characterImages, sceneImage, prompt, config: rawConfig } = generateStoryboardSchema.parse(req.body);
     const config = toAPIConfig(rawConfig);
 
     console.log('[Storyboard Generate] Starting...');
@@ -191,10 +192,7 @@ router.post('/storyboard/generate', async (req: Request, res: Response) => {
     const { imageBase64, tokenUsage } = await generateStoryboard(
       characterImages,
       sceneImage,
-      themePrompt,
-      abilityPrompt,
-      combatPrompt,
-      atmospherePrompt,
+      prompt,
       config
     );
 
@@ -216,6 +214,41 @@ router.post('/storyboard/generate', async (req: Request, res: Response) => {
       res.status(504).json({ success: false, error: 'API 请求超时，请检查网络连接', detail: errorMessage });
     } else if (error.status === 401) {
       res.status(401).json({ success: false, error: 'API Key 无效', detail: errorMessage });
+    } else if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors });
+    } else if (error.status || error.response?.status) {
+      const statusCode = error.status || error.response?.status;
+      res.status(statusCode).json({ success: false, error: errorMessage });
+    } else {
+      res.status(500).json({ success: false, error: errorMessage });
+    }
+  }
+});
+
+// Storyboard prompt generate endpoint (分镜词分析)
+router.post('/storyboard-prompt/generate', async (req: Request, res: Response) => {
+  try {
+    const { text, config: rawConfig, template, mode } = generateStoryboardPromptSchema.parse(req.body);
+    const config = toAPIConfig(rawConfig);
+
+    console.log('[Storyboard Prompt] Starting...');
+    console.log(`[Template] ${template}, [Mode] ${mode}`);
+
+    const { result, tokenUsage } = await generateStoryboardPrompt(text, config, template, mode);
+
+    res.json({
+      success: true,
+      data: result,
+      tokenUsage
+    });
+  } catch (error: any) {
+    console.error('[Storyboard Prompt ERROR]', error.message);
+    console.error('[Stack]', error.stack);
+
+    const errorMessage = extractErrorMessage(error);
+
+    if (error.code === 'ECONNREFUSED') {
+      res.status(502).json({ success: false, error: '无法连接到 API 服务，请检查代理设置', detail: errorMessage });
     } else if (error instanceof ZodError) {
       res.status(400).json({ success: false, error: error.errors });
     } else if (error.status || error.response?.status) {

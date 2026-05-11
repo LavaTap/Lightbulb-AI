@@ -19,6 +19,7 @@ interface HeaderProps {
 
 const TABS: { id: FeatureType; label: string }[] = [
   { id: 'inspiration', label: '灵感提示' },
+  { id: 'storyboard-prompt', label: '分镜词分析' },
   { id: 'chat', label: 'AI 对话' },
   { id: 'character', label: '文生图' },
   { id: 'threeview', label: '角色三视图' },
@@ -67,8 +68,8 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
         {/* Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {TABS.map((tab) => {
-            // 处理生图子菜单
-            if (['character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
+            // 处理文本子菜单和生图子菜单中的页面，不在导航栏直接显示
+            if (['inspiration', 'storyboard-prompt', 'character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
               return null;
             }
             return (
@@ -101,6 +102,44 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
             );
           })}
           
+          {/* 文本子菜单 */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={`
+                group relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                ${['inspiration', 'storyboard-prompt'].some(id => activeTab === id)
+                  ? 'text-blue-500 dark:text-primary-400'
+                  : 'text-gray-600 dark:text-gray-400'
+                }
+              `}
+            >
+              <span className="relative z-10 inline-block transition-all duration-300 
+                group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500 group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-110
+                dark:group-hover:bg-gradient-to-r dark:group-hover:from-purple-400 dark:group-hover:to-pink-400 dark:group-hover:bg-clip-text dark:group-hover:text-transparent flex items-center gap-1">
+                文本模块
+                <ChevronDown className="h-3 w-3" />
+              </span>
+              <span className={`
+                absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5
+                transition-all duration-300 rounded-full
+                ${['inspiration', 'storyboard-prompt'].some(id => activeTab === id)
+                  ? 'w-full'
+                  : 'w-0 group-hover:w-full'
+                }
+                bg-gradient-to-r from-purple-500 to-pink-500
+                dark:from-purple-400 dark:to-pink-400
+              `}></span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              <DropdownMenuItem onClick={() => onTabChange('inspiration')}>
+                灵感提示
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('storyboard-prompt')}>
+                分镜词分析
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* 生图子菜单 */}
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -159,8 +198,9 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
               <ChevronDown className="ml-2 h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[140px]">
+              {/* 主菜单项（不含文本/生图子菜单内页面） */}
               {TABS.map((tab) => {
-                if (['character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
+                if (['inspiration', 'storyboard-prompt', 'character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
                   return null;
                 }
                 return (
@@ -169,6 +209,16 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
                   </DropdownMenuItem>
                 );
               })}
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+              <DropdownMenuItem disabled className="text-xs text-gray-500">
+                文本模块
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('inspiration')}>
+                灵感提示
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('storyboard-prompt')}>
+                分镜词分析
+              </DropdownMenuItem>
               <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
               <DropdownMenuItem disabled className="text-xs text-gray-500">
                 生图模块

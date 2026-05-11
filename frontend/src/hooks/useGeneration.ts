@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { visionApi, imageApi, posterApi, storyboardApi, recordsApi } from '@/services/api';
+import { visionApi, imageApi, posterApi, storyboardApi, storyboardPromptApi, recordsApi } from '@/services/api';
 import { getCurrentProvider, getConfig } from '@/services/storage';
 import type { APIConfig, VisionAnalysisResult, AnalysisCategory } from '@/types';
-import type { CreateRecordRequest } from '@/types/api';
+import type { CreateRecordRequest, StoryboardPromptMode, StoryboardTemplate } from '@/types/api';
 
 function resolveConfig(overrideConfig?: APIConfig): APIConfig | null {
   if (overrideConfig) return overrideConfig;
@@ -17,7 +17,8 @@ interface UseGenerationReturn {
   generate: (prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024', config?: APIConfig) => Promise<string>;
   generateThreeView: (referenceImage: string, analysisPrompt: string, userPrompt?: string, config?: APIConfig) => Promise<string[]>;
   generatePoster: (images: string[], prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024', config?: APIConfig) => Promise<string>;
-  generateStoryboard: (characterImages: string[], sceneImage: string | undefined, themePrompt: string, abilityPrompt: string, combatPrompt: string, atmospherePrompt: string, config?: APIConfig) => Promise<string>;
+  generateStoryboard: (characterImages: string[], sceneImage: string | undefined, prompt: string, config?: APIConfig) => Promise<string>;
+  generateStoryboardPrompt: (text: string, template: StoryboardTemplate, mode: StoryboardPromptMode, config?: APIConfig) => Promise<{ scenePrompt: string; randomStoryboardPrompt: string; adaptiveStoryboardPrompt: string }>;
   clearError: () => void;
 }
 
@@ -208,10 +209,7 @@ export function useGeneration(): UseGenerationReturn {
   const generateStoryboard = useCallback(async (
     characterImages: string[],
     sceneImage: string | undefined,
-    themePrompt: string,
-    abilityPrompt: string,
-    combatPrompt: string,
-    atmospherePrompt: string,
+    prompt: string,
     overrideConfig?: APIConfig
   ): Promise<string> => {
     setIsLoading(true);
@@ -227,10 +225,7 @@ export function useGeneration(): UseGenerationReturn {
       const response = await storyboardApi.generate({
         characterImages,
         sceneImage,
-        themePrompt,
-        abilityPrompt,
-        combatPrompt,
-        atmospherePrompt,
+        prompt,
         config,
       });
 
@@ -246,11 +241,9 @@ export function useGeneration(): UseGenerationReturn {
         : '';
       const compressedGenerated = await compressImageAsBase64(response.data.imageBase64, 200, 0.7);
 
-      const fullPrompt = `题材：${themePrompt}\n人物能力：${abilityPrompt}\n对战逻辑：${combatPrompt}\n环境氛围：${atmospherePrompt}`;
-
       await saveRecord({
         featureType: 'storyboard',
-        prompt: fullPrompt,
+        prompt,
         uploadImages: compressedUpload,
         uploadImagesOriginal: allUploadImages[0] || '',
         generatedImages: compressedGenerated,
@@ -270,7 +263,47 @@ export function useGeneration(): UseGenerationReturn {
     }
   }, [saveRecord]);
 
-  return { isLoading, error, analyze, generate, generateThreeView, generatePoster, generateStoryboard, clearError };
+  const generateStoryboardPrompt = useCallback(async (
+    text: string,
+    template: StoryboardTemplate,
+    mode: StoryboardPromptMode,
+    overrideConfig?: APIConfig
+  ): Promise<{ scenePrompt: string; randomStoryboardPrompt: string; adaptiveStoryboardPrompt: string }> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const config = resolveConfig(overrideConfig);
+
+      if (!config) {
+        throw new Error('请先配置 API Key');
+      }
+
+      const response = await storyboardPromptApi.generate({ text, config, template, mode });
+
+      // 保存到生成记录
+      const labelMap: Record<StoryboardTemplate, string> = { scene: '场景生图模板', random: '随机分镜模板', adaptive: '自适应分镜模板' };
+      const generatedContent = response.data.scenePrompt || response.data.randomStoryboardPrompt || response.data.adaptiveStoryboardPrompt;
+      const recordPrompt = `【模式】${mode === 'battle' ? '对战' : '对话'}\n【模板】${labelMap[template]}\n\n【需求文本】\n${text}\n\n【生成结果】\n${generatedContent}`;
+      await saveRecord({
+        featureType: 'storyboard-prompt',
+        prompt: recordPrompt,
+        modelProvider: config.provider,
+        modelName: config.model,
+        tokenUsage: response.tokenUsage,
+      }).catch(err => console.warn('[GenerateStoryboardPrompt] Save record failed:', err));
+
+      return response.data;
+    } catch (e: any) {
+      const message = e.message || '生成失败';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [saveRecord]);
+
+  return { isLoading, error, analyze, generate, generateThreeView, generatePoster, generateStoryboard, generateStoryboardPrompt, clearError };
 }
 
 async function compressImageAsBase64(base64: string, maxSize: number, quality: number): Promise<string> {

@@ -29,7 +29,7 @@ export interface VisionAnalysisResult {
 // 分析类别类型
 export type AnalysisCategory = 'character' | 'landscape' | 'object' | 'other';
 
-export type FeatureType = 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster' | 'storyboard' | 'cg' | 'planning' | 'materials' | 'statistics';
+export type FeatureType = 'inspiration' | 'chat' | 'character' | 'threeview' | 'poster' | 'storyboard' | 'storyboard-prompt' | 'cg' | 'planning' | 'materials' | 'statistics';
 
 // Model capability categories
 export type ModelCategory = 'vision' | 'text-to-image' | 'image-to-image' | 'text';

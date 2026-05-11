@@ -8,6 +8,8 @@ import type {
   GeneratePosterResponse,
   GenerateStoryboardRequest,
   GenerateStoryboardResponse,
+  GenerateStoryboardPromptRequest,
+  GenerateStoryboardPromptResponse,
   RecordsResponse,
   CreateRecordRequest,
   ModelConfigsResponse,
@@ -64,7 +66,14 @@ export const posterApi = {
 
 export const storyboardApi = {
   generate: async (data: GenerateStoryboardRequest): Promise<GenerateStoryboardResponse> => {
-    const response = await api.post('/generate/storyboard/generate', data);
+    const response = await api.post('/storyboard/generate', data);
+    return response.data;
+  },
+};
+
+export const storyboardPromptApi = {
+  generate: async (data: GenerateStoryboardPromptRequest): Promise<GenerateStoryboardPromptResponse> => {
+    const response = await api.post('/storyboard-prompt/generate', data);
     return response.data;
   },
 };
