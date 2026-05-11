@@ -23,6 +23,7 @@ const TABS: { id: FeatureType; label: string }[] = [
   { id: 'character', label: '文生图' },
   { id: 'threeview', label: '角色三视图' },
   { id: 'poster', label: '海报生成' },
+  { id: 'storyboard', label: '九宫格分镜' },
   { id: 'cg', label: 'CG生成' },
   { id: 'planning', label: '计划面板' },
   { id: 'materials', label: '我的素材' },
@@ -67,7 +68,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
         <nav className="hidden md:flex items-center gap-1">
           {TABS.map((tab) => {
             // 处理生图子菜单
-            if (['character', 'threeview', 'poster', 'cg', 'materials', 'statistics'].includes(tab.id)) {
+            if (['character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
               return null;
             }
             return (
@@ -105,7 +106,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
             <DropdownMenuTrigger
               className={`
                 group relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${['character', 'threeview', 'poster', 'cg'].some(id => activeTab === id)
+                ${['character', 'threeview', 'poster', 'storyboard', 'cg'].some(id => activeTab === id)
                   ? 'text-blue-500 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400'
                 }
@@ -120,7 +121,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
               <span className={`
                 absolute -bottom-1 left-1/2 -translate-x-1/2 h-0.5
                 transition-all duration-300 rounded-full
-                ${['character', 'threeview', 'poster', 'cg'].some(id => activeTab === id)
+                ${['character', 'threeview', 'poster', 'storyboard', 'cg'].some(id => activeTab === id)
                   ? 'w-full'
                   : 'w-0 group-hover:w-full'
                 }
@@ -137,6 +138,9 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onTabChange('poster')}>
                 海报生成
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('storyboard')}>
+                九宫格分镜
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onTabChange('cg')}>
                 CG生成
@@ -156,7 +160,7 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[140px]">
               {TABS.map((tab) => {
-                if (['character', 'threeview', 'poster', 'cg', 'materials', 'statistics'].includes(tab.id)) {
+                if (['character', 'threeview', 'poster', 'storyboard', 'cg', 'materials', 'statistics'].includes(tab.id)) {
                   return null;
                 }
                 return (
@@ -177,6 +181,9 @@ export function Header({ activeTab, onTabChange, onOpenRecords, onOpenMaterials,
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onTabChange('poster')}>
                 海报生成
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onTabChange('storyboard')}>
+                九宫格分镜
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onTabChange('cg')}>
                 CG生成

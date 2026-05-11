@@ -40,6 +40,22 @@ export interface GeneratePosterResponse {
   tokenUsage: number;
 }
 
+export interface GenerateStoryboardRequest {
+  characterImages: string[];
+  sceneImage?: string;
+  themePrompt: string;
+  abilityPrompt: string;
+  combatPrompt: string;
+  atmospherePrompt: string;
+  config: APIConfig;
+}
+
+export interface GenerateStoryboardResponse {
+  success: boolean;
+  data: { imageBase64: string };
+  tokenUsage: number;
+}
+
 export interface RecordsResponse {
   success: boolean;
   data: {

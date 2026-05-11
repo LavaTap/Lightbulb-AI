@@ -6,6 +6,8 @@ import type {
   GenerateImageResponse,
   GeneratePosterRequest,
   GeneratePosterResponse,
+  GenerateStoryboardRequest,
+  GenerateStoryboardResponse,
   RecordsResponse,
   CreateRecordRequest,
   ModelConfigsResponse,
@@ -56,6 +58,13 @@ export const imageApi = {
 export const posterApi = {
   generate: async (data: GeneratePosterRequest): Promise<GeneratePosterResponse> => {
     const response = await api.post('/poster/generate', data);
+    return response.data;
+  },
+};
+
+export const storyboardApi = {
+  generate: async (data: GenerateStoryboardRequest): Promise<GenerateStoryboardResponse> => {
+    const response = await api.post('/generate/storyboard/generate', data);
     return response.data;
   },
 };

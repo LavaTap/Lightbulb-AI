@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { visionApi, imageApi, posterApi, recordsApi } from '@/services/api';
+import { visionApi, imageApi, posterApi, storyboardApi, recordsApi } from '@/services/api';
 import { getCurrentProvider, getConfig } from '@/services/storage';
 import type { APIConfig, VisionAnalysisResult, AnalysisCategory } from '@/types';
 import type { CreateRecordRequest } from '@/types/api';
@@ -17,6 +17,7 @@ interface UseGenerationReturn {
   generate: (prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024', config?: APIConfig) => Promise<string>;
   generateThreeView: (referenceImage: string, analysisPrompt: string, userPrompt?: string, config?: APIConfig) => Promise<string[]>;
   generatePoster: (images: string[], prompt: string, size?: '1024x1024' | '1024x1792' | '1792x1024', config?: APIConfig) => Promise<string>;
+  generateStoryboard: (characterImages: string[], sceneImage: string | undefined, themePrompt: string, abilityPrompt: string, combatPrompt: string, atmospherePrompt: string, config?: APIConfig) => Promise<string>;
   clearError: () => void;
 }
 
@@ -204,7 +205,72 @@ export function useGeneration(): UseGenerationReturn {
     }
   }, [saveRecord]);
 
-  return { isLoading, error, analyze, generate, generateThreeView, generatePoster, clearError };
+  const generateStoryboard = useCallback(async (
+    characterImages: string[],
+    sceneImage: string | undefined,
+    themePrompt: string,
+    abilityPrompt: string,
+    combatPrompt: string,
+    atmospherePrompt: string,
+    overrideConfig?: APIConfig
+  ): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const config = resolveConfig(overrideConfig);
+
+      if (!config) {
+        throw new Error('请先配置 API Key');
+      }
+
+      const response = await storyboardApi.generate({
+        characterImages,
+        sceneImage,
+        themePrompt,
+        abilityPrompt,
+        combatPrompt,
+        atmospherePrompt,
+        config,
+      });
+
+      // 收集所有上传图片用于记录
+      const allUploadImages = [...characterImages];
+      if (sceneImage) {
+        allUploadImages.push(sceneImage);
+      }
+
+      // 压缩第一张上传图作为缩略图
+      const compressedUpload = allUploadImages.length > 0
+        ? await compressImageAsBase64(allUploadImages[0], 200, 0.7)
+        : '';
+      const compressedGenerated = await compressImageAsBase64(response.data.imageBase64, 200, 0.7);
+
+      const fullPrompt = `题材：${themePrompt}\n人物能力：${abilityPrompt}\n对战逻辑：${combatPrompt}\n环境氛围：${atmospherePrompt}`;
+
+      await saveRecord({
+        featureType: 'storyboard',
+        prompt: fullPrompt,
+        uploadImages: compressedUpload,
+        uploadImagesOriginal: allUploadImages[0] || '',
+        generatedImages: compressedGenerated,
+        generatedImagesOriginal: response.data.imageBase64,
+        modelProvider: config.provider,
+        modelName: config.model,
+        tokenUsage: response.tokenUsage,
+      });
+
+      return response.data.imageBase64;
+    } catch (e: any) {
+      const message = e.message || '生成失败';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [saveRecord]);
+
+  return { isLoading, error, analyze, generate, generateThreeView, generatePoster, generateStoryboard, clearError };
 }
 
 async function compressImageAsBase64(base64: string, maxSize: number, quality: number): Promise<string> {

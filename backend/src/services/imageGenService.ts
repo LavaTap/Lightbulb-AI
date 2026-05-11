@@ -89,7 +89,7 @@ export async function generateImage(
     model,
     prompt,
     n: 1,
-    size,
+    size: size as any,
     response_format: 'b64_json',
   });
 

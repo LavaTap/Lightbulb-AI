@@ -6,6 +6,7 @@ import { ChatPage } from '@/pages/ChatPage';
 import { CharacterGenPage } from '@/pages/CharacterGenPage';
 import { ThreeViewPage } from '@/pages/ThreeViewPage';
 import { PosterGenPage } from '@/pages/PosterGenPage';
+import { StoryboardGenPage } from '@/pages/StoryboardGenPage';
 import { CgGenPage } from '@/pages/CgGenPage';
 import { PlanningPage } from '@/pages/PlanningPage';
 import { MyMaterialsPage } from '@/pages/MyMaterialsPage';
@@ -29,6 +30,8 @@ function App() {
         return <ThreeViewPage />;
       case 'poster':
         return <PosterGenPage />;
+      case 'storyboard':
+        return <StoryboardGenPage />;
       case 'cg':
         return <CgGenPage />;
       case 'planning':
