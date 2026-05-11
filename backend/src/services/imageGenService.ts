@@ -48,7 +48,7 @@ export async function generateImage(
   prompt: string,
   config: APIConfig,
   size: ImageSize = '1024x1024',
-  referenceImage?: string
+  referenceImage?: string | string[]
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const model = config.model || 'dall-e-3';
   
@@ -67,13 +67,13 @@ export async function generateImage(
   
   const requestStartTime = Date.now();
 
-  // 判断是否使用阿里云 qwen-image 模型
-  if (model.startsWith('qwen-image')) {
+  // 判断是否使用阿里云 qwen 系列模型（qwen-image / qwen-omni 等用于图像生成）
+  if (model.startsWith('qwen-') || config.provider === 'aliyun') {
     return await generateQwenImage(prompt, config, size, referenceImage);
   }
 
-  // 判断是否使用腾讯混元模型（hy-image 前缀 或 endpoint 含 tokenhub 的 hy 系列模型）
-  if (model.startsWith('hy-image') || (model.startsWith('hy') && config.endpoint?.includes('tokenhub'))) {
+  // 判断是否使用腾讯混元模型（hy-image 前缀 或 hy3 / hy 系列模型）
+  if (model.startsWith('hy-image') || model.startsWith('hy') || config.provider === 'tencent') {
     return await generateTencentHunyuan(prompt, config, size, referenceImage);
   }
 
@@ -119,7 +119,7 @@ async function generateQwenImage(
   prompt: string,
   config: APIConfig,
   size: ImageSize,
-  referenceImage?: string
+  referenceImage?: string | string[]
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   // 映射尺寸（仅当需要指定尺寸时使用）
   const sizeMap: Record<string, string> = {
@@ -134,11 +134,14 @@ async function generateQwenImage(
   
   // 如果有参考图，添加到消息开头
   if (referenceImage) {
-    content.push({
-      type: 'image_url',
-      image_url: {
-        url: `data:image/jpeg;base64,${referenceImage}`
-      }
+    const images = Array.isArray(referenceImage) ? referenceImage : [referenceImage];
+    images.forEach(img => {
+      content.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${img}`
+        }
+      });
     });
   }
   
@@ -235,7 +238,7 @@ async function generateTencentHunyuan(
   prompt: string,
   config: APIConfig,
   size: ImageSize,
-  referenceImage?: string
+  referenceImage?: string | string[]
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const endpoint = config.endpoint || 'https://aiart.tencentcloudapi.com';
   const model = config.model;
@@ -335,7 +338,7 @@ async function generateTencentTokenHub(
   prompt: string,
   config: APIConfig,
   size: ImageSize,
-  referenceImage?: string
+  referenceImage?: string | string[]
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const baseURL = (config.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image')
     .replace(/\/lite\/?$/, '')    // 用户可能把 endpoint 填成了 /lite 完整路径
@@ -390,7 +393,8 @@ async function generateTencentTokenHub(
   };
 
   if (referenceImage) {
-    submitBody.images = [`data:image/jpeg;base64,${referenceImage}`];
+    const images = Array.isArray(referenceImage) ? referenceImage : [referenceImage];
+    submitBody.images = images.map(img => `data:image/jpeg;base64,${img}`);
   }
 
   const submitRes = await fetch(`${baseURL}/submit`, {
@@ -462,7 +466,7 @@ async function generateGptImage2(
   prompt: string,
   config: APIConfig,
   size: ImageSize,
-  referenceImage?: string
+  referenceImage?: string | string[]
 ): Promise<{ imageBase64: string; tokenUsage: number }> {
   const baseURL = config.endpoint || 'https://grsai.dakka.com.cn';
   const model = config.model || 'gpt-image-2';
@@ -488,7 +492,8 @@ async function generateGptImage2(
 
   // 如果有参考图，添加到 urls 字段
   if (referenceImage) {
-    submitBody.urls = [`data:image/jpeg;base64,${referenceImage}`];
+    const images = Array.isArray(referenceImage) ? referenceImage : [referenceImage];
+    submitBody.urls = images.map(img => `data:image/jpeg;base64,${img}`);
   }
 
   console.log('[GPT Image 2] Submitting task to:', `${baseURL}/v1/draw/completions`);

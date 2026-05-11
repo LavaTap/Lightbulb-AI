@@ -99,10 +99,6 @@ function getVisionPrompt(category?: AnalysisCategory): string {
   return basePrompt;
 }
 
-// Vision analysis always uses qwen-vl-plus on Alibaba Cloud DashScope
-const VISION_MODEL = 'qwen-vl-plus';
-const VISION_ENDPOINT = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-
 export async function analyzeImage(
   imageBase64: string,
   config: APIConfig,
@@ -111,16 +107,19 @@ export async function analyzeImage(
   // 根据 category 生成对应的 prompt
   const prompt = getVisionPrompt(category);
 
-  // Use Alibaba Cloud DashScope for vision analysis
+  // 使用用户配置的模型进行视觉分析（支持任何 OpenAI 兼容的多模态模型）
   const client = new OpenAI({
     apiKey: config.apiKey,
-    baseURL: VISION_ENDPOINT,
+    baseURL: config.endpoint || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     dangerouslyAllowBrowser: true,
   });
 
-  console.log('\n========== Vision API Request (qwen-vl-plus) ==========');
-  console.log('[Model]', VISION_MODEL);
-  console.log('[Endpoint]', VISION_ENDPOINT);
+  const visionModel = config.model || 'qwen-vl-plus';
+
+  console.log('\n========== Vision API Request ==========');
+  console.log('[Model]', visionModel);
+  console.log('[Provider]', config.provider);
+  console.log('[Endpoint]', config.endpoint || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
   console.log('[Image Size]', (imageBase64.length / 1024).toFixed(2), 'KB');
   console.log('[API Key Prefix]', config.apiKey?.substring(0, 8) + '...');
   console.log('[Max Tokens]', 2000);
@@ -128,11 +127,11 @@ export async function analyzeImage(
   console.log('[Detail]', 'high');
   console.log('[Request Time]', new Date().toISOString());
   console.log('======================================================\n');
-  
+
   const requestStartTime = Date.now();
 
   const response = await client.chat.completions.create({
-    model: VISION_MODEL,
+    model: visionModel,
     messages: [
       {
         role: 'user',

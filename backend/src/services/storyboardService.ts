@@ -12,13 +12,23 @@ export async function generateStoryboard(
   console.log('[Character Images]', characterImages.length);
   console.log('[Has Scene Image]', !!sceneImage);
   console.log('[Provider]', config.provider);
+  console.log('[Model]', config.model);
   console.log('================================================\n');
 
-  // Analyze each character reference image
+  // 检测是否为纯图像生成模型（如腾讯混元、GPT Image 2）
+  // 这些模型本身支持多图参考生成，不需要额外的 AI 特征分析步骤
+  // 直接跳过分析，将所有参考图传递给生成阶段
+  const isImageOnlyModel =
+    config.provider === 'tencent' ||
+    config.provider === 'gptimage2' ||
+    config.model?.startsWith('hy-') ||
+    config.model === 'gpt-image-2';
+
+  // Analyze each character reference image (only for models that support vision)
   let characterAnalysis = '';
   let totalTokenUsage = 0;
 
-  if (characterImages.length > 0) {
+  if (!isImageOnlyModel && characterImages.length > 0) {
     for (let i = 0; i < characterImages.length; i++) {
       const { result: analysis, tokenUsage } = await analyzeImage(characterImages[i], config);
       characterAnalysis += `\nCharacter ${i + 1} features: ${analysis.analysis.en}`;
@@ -27,13 +37,17 @@ export async function generateStoryboard(
     }
   }
 
-  // Analyze scene reference image if provided
+  // Analyze scene reference image if provided (only for models that support vision)
   let sceneAnalysis = '';
-  if (sceneImage) {
+  if (!isImageOnlyModel && sceneImage) {
     const { result: analysis, tokenUsage } = await analyzeImage(sceneImage, config);
     sceneAnalysis = `\nScene features: ${analysis.analysis.en}`;
     totalTokenUsage += tokenUsage;
     console.log('[Scene Analysis]', analysis.analysis.zh.substring(0, 100) + (analysis.analysis.zh.length > 100 ? '...' : ''));
+  }
+
+  if (isImageOnlyModel) {
+    console.log('[Skip Analysis] Pure image generation model, directly passing all reference images to generation');
   }
 
   // Build the complete prompt with all rules
@@ -86,11 +100,15 @@ Generate a complete 16:9 nine-grid storyboard image.
   console.log('\nGenerating image...\n');
 
   // Generate the final storyboard at 2560x1440 (16:9)
+  const allReferenceImages = [...characterImages];
+  if (sceneImage) {
+    allReferenceImages.push(sceneImage);
+  }
   const { imageBase64, tokenUsage } = await generateImage(
     finalPrompt,
     config,
     '2560x1440',
-    characterImages.length > 0 ? characterImages[0] : undefined
+    allReferenceImages.length > 0 ? allReferenceImages : undefined
   );
 
   totalTokenUsage += tokenUsage;
