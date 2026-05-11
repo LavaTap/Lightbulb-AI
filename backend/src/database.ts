@@ -25,7 +25,11 @@ async function initDb(): Promise<void> {
   }
 
   initDatabase(db);
-  saveDatabase();
+  try {
+    saveDatabase();
+  } catch (err) {
+    console.error('[Database] Initial save failed (non-fatal):', err);
+  }
 }
 
 function initDatabase(database: SqlJsDatabase): void {
@@ -195,11 +199,25 @@ function initDatabase(database: SqlJsDatabase): void {
 }
 
 export function saveDatabase(): void {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+  if (!db) return;
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  // Windows 上文件可能被临时锁定（防病毒扫描/其他进程），重试 3 次
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      fs.writeFileSync(dbPath, buffer);
+      return;
+    } catch (err: any) {
+      lastError = err;
+      if (attempt < 2) {
+        // 同步忙等 200ms 后重试（Windows 文件锁短暂释放）
+        const start = Date.now();
+        while (Date.now() - start < 200) { /* busy wait */ }
+      }
+    }
   }
+  console.error(`[Database] Failed to save database after 3 attempts:`, lastError?.message);
 }
 
 export async function getDatabase(): Promise<SqlJsDatabase> {
@@ -513,6 +531,21 @@ export async function createMessage(data: {
   const id = result[0].values[0][0] as number;
   saveDatabase();
   return id;
+}
+
+export async function deleteMessageById(messageId: number): Promise<void> {
+  const database = await getDatabase();
+  // 先获取 conversation_id，再删除消息
+  const result = database.exec('SELECT conversation_id FROM chat_messages WHERE id = ?', [messageId]);
+  if (result.length === 0 || result[0].values.length === 0) return;
+  const conversationId = result[0].values[0][0] as number;
+
+  database.run('DELETE FROM chat_messages WHERE id = ?', [messageId]);
+  database.run(
+    'UPDATE conversations SET message_count = MAX(0, message_count - 1), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [conversationId]
+  );
+  saveDatabase();
 }
 
 export async function getMessageCount(conversationId: number): Promise<number> {

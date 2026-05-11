@@ -14,6 +14,7 @@ import {
   deleteConversation,
   getMessagesByConversationId,
   createMessage,
+  deleteMessageById,
 } from '../database.js';
 import type { APIConfig } from '../types/index.js';
 
@@ -79,6 +80,30 @@ function toAPIConfig(data: any): APIConfig {
     useProxy: data.useProxy || false,
     proxyEndpoint: data.proxyEndpoint || '',
   };
+}
+
+/** 判断模型是否支持图片视觉理解能力 */
+function modelSupportsVision(provider: string, model: string): boolean {
+  // 已知支持视觉的模型模式列表
+  const visionModelPatterns: { provider: string; pattern: RegExp }[] = [
+    // OpenAI
+    { provider: 'openai', pattern: /^gpt-4o/ },
+    { provider: 'openai', pattern: /^gpt-4\.1/ },
+    { provider: 'openai', pattern: /^gpt-4-turbo/ },
+    // 阿里云
+    { provider: 'aliyun', pattern: /^qwen-vl/ },
+    // Google
+    { provider: 'google', pattern: /^gemini/ },
+    // 深度求索
+    { provider: 'deepseek', pattern: /^janus/ },
+    // 字节跳动
+    { provider: 'bytedance', pattern: /vision/i },
+    // 百度
+    { provider: 'baidu', pattern: /vision/i },
+    // 讯飞
+    { provider: 'xfyun', pattern: /vision/i },
+  ];
+  return visionModelPatterns.some(vm => vm.provider === provider && vm.pattern.test(model));
 }
 
 // 获取对话列表
@@ -188,7 +213,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
     const attachmentsJson = data.attachments ? JSON.stringify(data.attachments) : undefined;
     // 估算用户消息 token 用量：按 1 token ≈ 4 个字符估算
     const estimatedUserTokens = Math.ceil(data.content.length / 4);
-    await createMessage({
+    const userMessageId = await createMessage({
       conversation_id: conversationId,
       role: 'user',
       content: data.content,
@@ -273,6 +298,24 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       ...historyMessages,
     ];
 
+    // 预拦截检查：非视觉模型收到图片时，在调用 API 前拦截
+    const hasImageContent = messages.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'image_url'));
+    if (hasImageContent && !modelSupportsVision(config.provider, config.model)) {
+      console.warn(`[ChatRoute] Model ${config.model} does not support vision but received image content. Intercepting.`);
+      await deleteMessageById(userMessageId);
+      // 设置 SSE 响应头并发送错误事件
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.write(`event: error\ndata: ${JSON.stringify({
+        error: `当前选择的模型（${config.model}）不支持图片分析，已为您删除该消息。请切换到支持多模态的模型（如 GPT-4o、Gemini、Qwen-VL 等）。`,
+        type: 'multimodal_not_supported',
+      })}\n\n`);
+      res.end();
+      return;
+    }
+
     // 设置 SSE 响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -349,9 +392,17 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       // 检测是否为模型不支持多模态内容（图片/视频）的错误
       const errMsg = extractErrorMessage(streamError);
       const status = (streamError as any)?.status;
+      const errorCode = (streamError as any)?.code || (streamError as any)?.error?.code;
       const isMultimodalError = (
         status === 400 &&
         (errMsg.includes('image_url') || errMsg.includes('multimodal') || errMsg.includes('image input') || errMsg.includes('vision'))
+      );
+
+      // 检测是否为内容审核拦截（阿里云 data_inspection_failed / inappropriate content）
+      const isContentModerationError = (
+        errorCode === 'data_inspection_failed' ||
+        errMsg.includes('inappropriate content') ||
+        errMsg.includes('data_inspection_failed')
       );
 
       // 检测是否为纯图片/非对话模型（如图像生成模型被误用于聊天）
@@ -359,7 +410,14 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
         status === 404 || status === 400
       );
 
-      if (isMultimodalError) {
+      if (isContentModerationError) {
+        // 内容审核拦截：图片内容违规，删除用户消息
+        await deleteMessageById(userMessageId).catch(err => {
+          console.warn('[ChatRoute] Failed to delete user message:', err);
+        });
+        const friendlyMsg = '发送的图片内容未通过内容安全审核，图片已被拦截。请尝试更换图片或使用不同的提示内容。已为您删除该消息。';
+        res.write(`event: error\ndata: ${JSON.stringify({ error: friendlyMsg, type: 'inappropriate_content' })}\n\n`);
+      } else if (isMultimodalError) {
         // 发送警告事件告知前端当前模型不支持图片
         const warningMsg = '当前模型不支持读取图片内容，已移除图片附件，仅发送文字继续对话。';
         res.write(`event: warning\ndata: ${JSON.stringify({ warning: warningMsg, type: 'multimodal_not_supported' })}\n\n`);

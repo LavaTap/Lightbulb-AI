@@ -222,6 +222,16 @@ export function useChat() {
               });
             } else if (eventType === 'error') {
               setError(data.error || '未知错误');
+              // 当错误类型为 inappropriate_content 或 multimodal_not_supported 时，删除本地用户消息
+              if (data.type === 'inappropriate_content' || data.type === 'multimodal_not_supported') {
+                setMessages(prev => {
+                  // 删除用户消息和助手占位符（最后两条消息）
+                  if (prev.length >= 2) {
+                    return prev.slice(0, -2);
+                  }
+                  return prev;
+                });
+              }
             }
           } catch {
             // 忽略解析错误
