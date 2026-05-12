@@ -173,7 +173,7 @@ export function PlanningCanvas({
     <div
       ref={reactFlowWrapperRef}
       className="w-full relative"
-      style={{ height: 'calc(100vh - 64px)', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      style={{ height: 'calc(100vh - 64px)', background: '#ffffff' }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -207,7 +207,7 @@ export function PlanningCanvas({
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="#9ca3af"
+          color="#e5e7eb"
         />
         <MiniMap
           nodeColor="#8b5cf6"
