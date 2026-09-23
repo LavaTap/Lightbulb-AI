@@ -1,0 +1,411 @@
+import { useState, useEffect, useRef } from 'react';
+import { Sparkles, Copy, Check, User, Mountain, Box, Sparkle, Upload, ImageIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ImageUploadZone } from '@/components/ImageUploadZone';
+import { ModelDropdown } from '@/components/ModelDropdown';
+import { useGeneration } from '@/hooks/useGeneration';
+import { useApiConfig } from '@/hooks/useApiConfig';
+import { modelConfigToApiConfig, getPersistedModelId, setPersistedModelId } from '@/lib/model-utils';
+import type { VisionAnalysisResult, ModelConfig, AnalysisCategory } from '@/types';
+import { cn, base64ToDataUrl } from '@/lib/utils';
+
+const ANALYSIS_CATEGORIES: {
+  value: AnalysisCategory;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}[] = [
+  { value: 'character', label: '角色', icon: User, description: '含比例分析' },
+  { value: 'landscape', label: '风景', icon: Mountain, description: '场景构图' },
+  { value: 'object', label: '物品', icon: Box, description: '材质细节' },
+  { value: 'other', label: '其他', icon: Sparkle, description: '通用分析' },
+];
+
+export function InspirationPage() {
+  const [images, setImages] = useState<string[]>([]);
+  const [analysis, setAnalysis] = useState<VisionAnalysisResult | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [selectedModelConfig, setSelectedModelConfig] = useState<ModelConfig | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AnalysisCategory>('other');
+
+  const { isLoading, error, analyze } = useGeneration();
+  const { modelConfigs, getConfigsByCategory } = useApiConfig();
+  const initRef = useRef(false);
+
+  const selectedModelName = selectedModelConfig?.model || '';
+  const selectedApiConfig = selectedModelConfig ? modelConfigToApiConfig(selectedModelConfig) : null;
+
+  useEffect(() => {
+    if (initRef.current || modelConfigs.length === 0) return;
+    const configs = getConfigsByCategory(['vision']);
+    if (configs.length === 0) return;
+    initRef.current = true;
+    const persistedId = getPersistedModelId('inspiration');
+    const match = persistedId ? configs.find(c => c.id.toString() === persistedId) : null;
+    setSelectedModelConfig(match || configs[0]);
+  }, [modelConfigs, getConfigsByCategory]);
+
+  const handleAnalyze = async () => {
+    if (images.length === 0) return;
+    try {
+      const result = await analyze(images[0], selectedCategory, selectedApiConfig || undefined);
+      setAnalysis(result);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCopy = async (text: string, key: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const getPrompt = (analysis: VisionAnalysisResult, lang: 'zh' | 'en') => {
+    return analysis.analysis[lang];
+  };
+
+  const getJsonPrompt = (analysis: VisionAnalysisResult) => {
+    return JSON.stringify(analysis, null, 2);
+  };
+
+  // 从AI分析结果中提取字段值（zh），不存在则返回空字符串
+  const getFieldZh = (analysis: VisionAnalysisResult, key: string): string => {
+    return (analysis as any)?.[key]?.zh || '';
+  };
+
+  // 本地拼装角色基准资产（Character Benchmark Asset）提示词
+  const buildCharacterBenchmarkPrompt = (analysis: VisionAnalysisResult): string => {
+    const colorStyle = getFieldZh(analysis, 'colorStyle');
+    const material = getFieldZh(analysis, 'material');
+    const proportion = getFieldZh(analysis, 'proportion');
+
+    const analysisSection = [
+      colorStyle && `【色彩画风】${colorStyle}`,
+      material && `【材质特征】${material}`,
+      proportion && `【角色比例】${proportion}`,
+    ].filter(Boolean).join('；');
+
+    return `严格参考上传图的原生美术风格与核心质感，生成一张精确作为视频大模型"视觉真值（Ground Truth）"的"风格"角色基准资产（Character Benchmark Asset）大图。采用左一右三水平对齐的宽幅布局，背景为纯白无阴影的工业级白底。
+
+画面最左侧：展示一个超高清的头部近景大特写肖像（仅到肩颈处）。特写必须极其清晰地完美还原参考图人物的面部骨相特征、五官细节、特定的发型结构以及材质。
+
+画面右侧：并排排列三个超清的全身站立像。顺序为：1. 全身正视站姿；2. 全身90度正侧视站姿；3. 全身正后视站姿。强约束：这三个全身像必须具有恰当的比例结构，保持放松自然的标准A-pose站姿。全身像表情必须固定为中立无表情，绝对禁止摆任何戏剧化动作或遮挡身体细节。这三个全身像的面部、发型、体态与服饰必须与最左侧的大特写保持100%绝对同源一致。
+
+${analysisSection ? `分析参考：${analysisSection}` : ''}`;
+  };
+
+  const handleModelChange = (modelId: string, config: ModelConfig) => {
+    setSelectedModelConfig(config);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="text-center space-y-2 mb-6">
+        <h1 className="text-3xl font-bold gradient-text">灵感提示</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          上传图片，AI 将分析并生成描述性提示词
+        </p>
+      </div>
+
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ===== Left Column: Control Panel (col-span-7) ===== */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* Upload Section - Compact */}
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="w-5 h-5 text-primary-600" />
+                <span className="text-primary-700">上传图片</span>
+              </CardTitle>
+          <ModelDropdown
+            category={['vision']}
+            selectedModel={selectedModelConfig?.model || ''}
+            onModelChange={handleModelChange}
+          />
+            </CardHeader>
+            <CardContent>
+              <ImageUploadZone
+                images={images}
+                onImagesChange={setImages}
+                hidePreview
+              />
+              <div className="mt-4 flex gap-3">
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={images.length === 0 || isLoading}
+                  className="flex-1 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-md hover:shadow-xl transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      开始分析
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Category Selection */}
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="w-5 h-5 text-primary-600" />
+                <span className="text-primary-700">选择分析类型</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {ANALYSIS_CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const isSelected = selectedCategory === cat.value;
+                  return (
+                    <motion.button
+                      key={cat.value}
+                      onClick={() => setSelectedCategory(cat.value)}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      animate={{
+                        borderColor: isSelected
+                          ? 'hsl(var(--muted-foreground))'
+                          : 'hsl(var(--border))',
+                        backgroundColor: isSelected
+                          ? 'hsl(var(--muted) / 0.5)'
+                          : 'transparent',
+                        boxShadow: isSelected
+                          ? '0 0 0 1px hsl(var(--muted-foreground) / 0.3)'
+                          : 'none',
+                      }}
+                      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-lg border-2"
+                    >
+                      <motion.div
+                        animate={{ scale: isSelected ? 1.08 : 1 }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <Icon className={cn(
+                          'w-8 h-8',
+                          isSelected ? 'text-foreground' : 'text-muted-foreground'
+                        )} />
+                      </motion.div>
+                      <span className={cn(
+                        'font-medium',
+                        isSelected ? 'text-foreground' : 'text-muted-foreground'
+                      )}>
+                        {cat.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {cat.description}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+              {selectedCategory === 'character' && (
+                <p className="mt-3 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Sparkles className="w-4 h-4" />
+                  选择角色分析，将额外进行人体比例分析（头身比、三庭五眼等）
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Error Message */}
+          {error && (
+            <Card className="glass border-red-300/50 bg-gradient-to-r from-red-500/15 to-red-600/10 dark:from-red-900/30 dark:to-red-800/20 backdrop-blur-lg">
+              <CardContent className="p-4 text-red-600 dark:text-red-400">
+                {error}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Analysis Result & Prompt Output */}
+          {analysis && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-5"
+            >
+              {/* AI 完整分析 */}
+              <Card className="glass-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary-600" />
+                      <span className="text-primary-700">AI 完整分析</span>
+                    </span>
+                    <span className="text-sm font-normal text-green-600 dark:text-green-400 flex items-center gap-1">
+                      ✨ 分析完成
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">内容分析</h4>
+                    <Textarea
+                      value={analysis.analysis?.zh || ''}
+                      onChange={(e) => setAnalysis({
+                        ...analysis,
+                        analysis: { ...analysis.analysis, zh: e.target.value }
+                      })}
+                      className="min-h-[100px] resize-y"
+                      placeholder="AI 分析结果将显示在这里..."
+                    />
+                  </div>
+
+                  {(analysis as any)['画风特征']?.zh && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">画风特征</h4>
+                      <Textarea
+                        value={(analysis as any)['画风特征'].zh}
+                        onChange={(e) => setAnalysis({
+                          ...analysis,
+                          ['画风特征']: { ...(analysis as any)['画风特征'], zh: e.target.value }
+                        } as any)}
+                        className="min-h-[100px] resize-y"
+                      />
+                    </div>
+                  )}
+
+                  {Object.entries(analysis).filter(([key]) => key !== 'analysis' && key !== '画风特征').map(([key, value]: [string, any]) =>
+                    value?.zh && (
+                      <div key={key}>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{key}</h4>
+                        <Textarea value={value.zh} readOnly className="min-h-[80px] resize-y" />
+                      </div>
+                    )
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Prompt Display */}
+              <Card className="glass-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="w-5 h-5 text-primary-600" />
+                    <span className="text-primary-700">提示词</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue={selectedCategory === 'character' ? 'benchmark' : 'zh'} className="w-full">
+                    <TabsList className="w-full justify-start">
+                      {selectedCategory === 'character' && (
+                        <TabsTrigger value="benchmark">角色基准资产</TabsTrigger>
+                      )}
+                      <TabsTrigger value="zh">中文</TabsTrigger>
+                      <TabsTrigger value="en">English</TabsTrigger>
+                      <TabsTrigger value="json">JSON</TabsTrigger>
+                    </TabsList>
+
+                    {selectedCategory === 'character' && (
+                      <TabsContent value="benchmark" className="mt-4">
+                        <div className="relative">
+                          <Textarea
+                            value={buildCharacterBenchmarkPrompt(analysis)}
+                            readOnly
+                            className="min-h-[240px] font-mono text-sm resize-y"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="absolute top-2 right-2"
+                            onClick={() => handleCopy(buildCharacterBenchmarkPrompt(analysis), 'benchmark')}
+                          >
+                            {copied === 'benchmark' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                          💡 此提示词可直接用于图片生成模型，生成视频大模型训练所需的"视觉真值"角色基准资产图。
+                        </p>
+                      </TabsContent>
+                    )}
+
+                    <TabsContent value="zh" className="mt-4">
+                      <div className="relative">
+                        <Textarea value={getPrompt(analysis, 'zh')} readOnly className="min-h-[180px] font-mono text-sm" />
+                        <Button size="sm" variant="outline" className="absolute top-2 right-2" onClick={() => handleCopy(getPrompt(analysis, 'zh'), 'zh')}>
+                          {copied === 'zh' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="en" className="mt-4">
+                      <div className="relative">
+                        <Textarea value={getPrompt(analysis, 'en')} readOnly className="min-h-[180px] font-mono text-sm" />
+                        <Button size="sm" variant="outline" className="absolute top-2 right-2" onClick={() => handleCopy(getPrompt(analysis, 'en'), 'en')}>
+                          {copied === 'en' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="json" className="mt-4">
+                      <div className="relative">
+                        <Textarea value={getJsonPrompt(analysis)} readOnly className="min-h-[180px] font-mono text-sm" />
+                        <Button size="sm" variant="outline" className="absolute top-2 right-2" onClick={() => handleCopy(getJsonPrompt(analysis), 'json')}>
+                          {copied === 'json' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </div>
+
+        {/* ===== Right Column: Image Preview Panel (col-span-5) ===== */}
+        <div className="lg:col-span-5">
+          <div className="lg:sticky lg:top-24 space-y-4">
+            <Card className="glass-card overflow-hidden min-h-[400px] lg:min-h-[600px]">
+              {images.length > 0 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4" /> 已上传图片
+                    </span>
+                    <button
+                      onClick={() => setImages([])}
+                      className="text-xs text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      移除图片
+                    </button>
+                  </div>
+                  <div className="flex-1 rounded-xl overflow-hidden border border-gray-200/60 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md">
+                    <img
+                      src={`data:image/jpeg;base64,${images[0]}`}
+                      alt="Uploaded preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[400px] lg:min-h-[600px] text-muted-foreground p-8">
+                  <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                    <Upload className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                  </div>
+                  <p className="text-sm font-medium">等待上传图片</p>
+                  <p className="text-xs mt-1 text-center max-w-[200px]">
+                    在左侧面板上传图片后，预览将在此处显示
+                  </p>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

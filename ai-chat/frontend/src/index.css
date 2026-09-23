@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: 255 255 255;
+  --bg-secondary: 241 245 249;
+  --text-primary: 15 23 42;
+  --text-secondary: 100 116 139;
+}
+
+.dark {
+  --bg-primary: 15 23 42;
+  --bg-secondary: 30 41 59;
+  --text-primary: 248 250 252;
+  --text-secondary: 148 163 184;
+}
+
+body {
+  @apply text-[rgb(var(--text-primary))];
+  @apply transition-colors duration-200;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 25%, #f5f0ff 50%, #f0faff 75%, #f0f4ff 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.dark body {
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1040 25%, #0f172a 50%, #1a0f2e 75%, #0f0c29 100%);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+textarea { resize: vertical; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+.dark textarea { scrollbar-color: #475569 transparent; }

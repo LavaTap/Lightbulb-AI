@@ -1,0 +1,71 @@
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Layout } from '@/components/Layout';
+import { InspirationPage } from '@/pages/InspirationPage';
+import { ChatPage } from '@/pages/ChatPage';
+import { CharacterGenPage } from '@/pages/CharacterGenPage';
+import { ThreeViewPage } from '@/pages/ThreeViewPage';
+import { PosterGenPage } from '@/pages/PosterGenPage';
+import { StoryboardGenPage } from '@/pages/StoryboardGenPage';
+import { StoryboardPromptPage } from '@/pages/StoryboardPromptPage';
+import { CgGenPage } from '@/pages/CgGenPage';
+import { PlanningPage } from '@/pages/PlanningPage';
+import { MyMaterialsPage } from '@/pages/MyMaterialsPage';
+import { CharacterChatPage } from '@/pages/CharacterChatPage';
+import { StatisticsPage } from '@/pages/StatisticsPage';
+import { useTheme } from '@/hooks/useTheme';
+import type { FeatureType } from '@/types';
+
+function App() {
+  const [activeTab, setActiveTab] = useState<FeatureType>('inspiration');
+  const { theme } = useTheme();
+
+  const renderPage = () => {
+    switch (activeTab) {
+      case 'inspiration':
+        return <InspirationPage />;
+      case 'chat':
+        return <ChatPage />;
+      case 'character':
+        return <CharacterGenPage />;
+      case 'threeview':
+        return <ThreeViewPage />;
+      case 'poster':
+        return <PosterGenPage />;
+      case 'storyboard':
+        return <StoryboardGenPage />;
+      case 'storyboard-prompt':
+        return <StoryboardPromptPage />;
+      case 'cg':
+        return <CgGenPage />;
+      case 'planning':
+        return <PlanningPage />;
+      case 'materials':
+        return <MyMaterialsPage />;
+      case 'statistics':
+        return <StatisticsPage />;
+      case 'character-chat':
+        return <CharacterChatPage />;
+      default:
+        return <InspirationPage />;
+    }
+  };
+
+  return (
+    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {renderPage()}
+        </motion.div>
+      </AnimatePresence>
+    </Layout>
+  );
+}
+
+export default App;

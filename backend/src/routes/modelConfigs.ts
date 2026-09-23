@@ -1,0 +1,597 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import axios from 'axios';
+import {
+  getAllModelConfigs,
+  getModelConfigById,
+  saveModelConfig,
+  updateModelConfig,
+  deleteModelConfig,
+  setActiveModelConfig,
+  getActiveModelConfig,
+} from '../database.js';
+import { ZodError, z } from 'zod';
+
+const router = Router();
+
+/**
+ * 规范化 category 字段：数组转 JSON 字符串存储，单值直接存储
+ */
+function serializeCategory(category: any): string {
+  if (Array.isArray(category)) {
+    return category.join(',');
+  }
+  return String(category || 'vision');
+}
+
+/**
+ * 反序列化 category：逗号分隔的字符串转数组，单值保持不变
+ */
+function deserializeCategory(category: any): string | string[] {
+  if (!category) return 'vision';
+  let str = String(category);
+  // 归一化 legacy 类别
+  str = str.replace(/image-understanding/g, 'vision').replace(/multimodal/g, 'vision');
+  // 如果包含逗号，解析为数组
+  if (str.includes(',')) {
+    const items = str.split(',').map(s => s.trim()).filter(Boolean);
+    // 去重
+    const unique = [...new Set(items)];
+    return unique.length === 1 ? unique[0] : unique;
+  }
+  return str;
+}
+
+const modelConfigSchema = z.object({
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  apiKey: z.string().optional(),
+  endpoint: z.string().optional(),
+  useProxy: z.boolean().optional(),
+  proxyEndpoint: z.string().optional(),
+  category: z.union([z.string(), z.array(z.string())]).optional().default('vision'),
+  capabilities: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
+});
+
+const testConnectionSchema = z.object({
+  provider: z.string(),
+  apiKey: z.string().default(''),
+  model: z.string(),
+  endpoint: z.string().optional(),
+  useProxy: z.boolean().optional(),
+  proxyEndpoint: z.string().optional(),
+});
+
+// GET all model configs
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const configs = await getAllModelConfigs();
+    res.json({
+      success: true,
+      data: configs.map(c => ({
+        id: c.id,
+        name: c.name,
+        provider: c.provider,
+        model: c.model,
+        apiKey: c.api_key,
+        endpoint: c.endpoint,
+        useProxy: c.use_proxy === 1,
+        proxyEndpoint: c.proxy_endpoint,
+        category: deserializeCategory(c.category),
+        capabilities: c.capabilities ? JSON.parse(c.capabilities) : [],
+        isActive: c.is_active === 1,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET active model config
+router.get('/active', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const config = await getActiveModelConfig();
+    if (!config) {
+      return res.json({ success: true, data: null });
+    }
+    res.json({
+      success: true,
+      data: {
+        id: config.id,
+        name: config.name,
+        provider: config.provider,
+        model: config.model,
+        apiKey: config.api_key,
+        endpoint: config.endpoint,
+        useProxy: config.use_proxy === 1,
+        proxyEndpoint: config.proxy_endpoint,
+        category: deserializeCategory(config.category),
+        capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
+        isActive: true,
+        createdAt: config.created_at,
+        updatedAt: config.updated_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET single model config
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const config = await getModelConfigById(id);
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Config not found' });
+    }
+    res.json({
+      success: true,
+      data: {
+        id: config.id,
+        name: config.name,
+        provider: config.provider,
+        model: config.model,
+        apiKey: config.api_key,
+        endpoint: config.endpoint,
+        useProxy: config.use_proxy === 1,
+        proxyEndpoint: config.proxy_endpoint,
+        category: deserializeCategory(config.category),
+        capabilities: config.capabilities ? JSON.parse(config.capabilities) : [],
+        isActive: config.is_active === 1,
+        createdAt: config.created_at,
+        updatedAt: config.updated_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST create new model config
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = modelConfigSchema.parse(req.body);
+    
+    const id = await saveModelConfig({
+      name: data.name,
+      provider: data.provider,
+      model: data.model,
+      api_key: data.apiKey || null,
+      endpoint: data.endpoint || null,
+      use_proxy: data.useProxy ? 1 : 0,
+      proxy_endpoint: data.proxyEndpoint || null,
+      category: serializeCategory(data.category),
+      capabilities: data.capabilities ? JSON.stringify(data.capabilities) : null,
+      is_active: data.isActive ? 1 : 0,
+    });
+    
+    // If this config is set as active, deactivate others
+    if (data.isActive) {
+      await setActiveModelConfig(id);
+    }
+    
+    res.json({ success: true, data: { id } });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
+    } else {
+      next(error);
+    }
+  }
+});
+
+// PUT update model config
+router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const data = modelConfigSchema.partial().parse(req.body);
+    
+    const existing = await getModelConfigById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Config not found' });
+    }
+    
+    await updateModelConfig(id, {
+      name: data.name,
+      provider: data.provider,
+      model: data.model,
+      api_key: data.apiKey,
+      endpoint: data.endpoint,
+      use_proxy: data.useProxy !== undefined ? (data.useProxy ? 1 : 0) : undefined,
+      proxy_endpoint: data.proxyEndpoint,
+      category: data.category !== undefined ? serializeCategory(data.category) : undefined,
+      capabilities: data.capabilities ? JSON.stringify(data.capabilities) : undefined,
+      is_active: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined,
+    });
+    
+    if (data.isActive) {
+      await setActiveModelConfig(id);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
+    } else {
+      next(error);
+    }
+  }
+});
+
+// DELETE model config
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await deleteModelConfig(id);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST set active model
+router.post('/:id/activate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await setActiveModelConfig(id);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST test connection
+router.post('/test-connection', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = testConnectionSchema.parse(req.body);
+    console.log('[Test Connection] Starting test for provider:', data.provider);
+
+    if (!data.apiKey) {
+      res.json({ success: false, message: 'API Key 未配置，请填写后再测试' });
+      return;
+    }
+
+    let success = false;
+    let message = '';
+    
+    if (data.provider === 'google') {
+      // Google: use GET /models?key=apiKey
+      const baseUrl = data.useProxy && data.proxyEndpoint 
+        ? data.proxyEndpoint 
+        : 'https://generativelanguage.googleapis.com';
+      const url = `${baseUrl}/v1beta/models?key=${data.apiKey}`;
+      
+      try {
+        const response = await axios.get(url, { timeout: 10000 });
+        success = response.status === 200;
+        message = 'API 连接成功';
+      } catch (err: any) {
+        if (err.response?.status === 403) {
+          message = 'API Key 无效或无权访问';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else {
+          message = `连接失败: ${err.message}`;
+        }
+      }
+    } else if (data.provider === 'gptimage2') {
+      // gptimage2: 使用 /v1/draw/completions 测试连通性
+      const baseUrl = data.endpoint || 'https://grsai.dakka.com.cn';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${data.apiKey}`,
+      };
+      
+      try {
+        const response = await axios.post(
+          `${baseUrl}/v1/draw/completions`,
+          {
+            model: data.model || 'gpt-image-2',
+            prompt: 'A simple blue circle on white background',
+            aspectRatio: '1:1',
+            webHook: '-1',
+          },
+          { headers, timeout: 30000 }
+        );
+        success = response.status === 200 && response.data?.code === 0 && response.data?.data?.id;
+        message = success ? 'API 连接成功（GPT Image 2 代理）' : 'API 返回异常';
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 404) {
+          message = '端点不存在，请检查 API 地址';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else if (err.code === 'ETIMEDOUT') {
+          message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    } else if (data.provider === 'aliyun') {
+      // 阿里云 DashScope API 测试
+      const baseUrl = data.useProxy && data.proxyEndpoint
+        ? data.proxyEndpoint
+        : (data.endpoint || 'https://dashscope.aliyuncs.com');
+      const isWanxModel = data.model.toLowerCase().includes('wanx');
+
+      try {
+        if (isWanxModel) {
+          // wanx 图像模型：发送轻量请求，400 表示认证通过
+          const response = await axios.post(
+            `${baseUrl}/api/v1/services/aigc/multimodal-generation/generation`,
+            { model: data.model, input: { messages: [{ role: 'user', content: 'test' }] } },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+          );
+          success = true;
+          message = 'API 连接成功（阿里云 DashScope）';
+        } else {
+          // 文本/视觉模型：使用兼容模式
+          const response = await axios.post(
+            `${baseUrl}/compatible-mode/v1/chat/completions`,
+            { model: data.model, messages: [{ role: 'user', content: '测试连接，请回复OK' }], max_tokens: 10 },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 }
+          );
+          success = response.status === 200 && response.data?.choices;
+          message = 'API 连接成功（阿里云）';
+        }
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 400) {
+          // 400 表示认证通过，只是请求参数不完整
+          success = true;
+          message = 'API 连接成功（阿里云 DashScope）';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else if (err.code === 'ETIMEDOUT') {
+          message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    } else if (data.provider === 'tencent') {
+      // 腾讯云混元 API 测试
+      const isTokenHub = (data.endpoint || '').includes('tokenhub') || (data.endpoint || '').includes('tencentmaas');
+
+      try {
+        if (isTokenHub) {
+          // TokenHub 模式：测试 /lite 端点
+          const baseUrl = data.endpoint || 'https://tokenhub.tencentmaas.com/v1/api/image';
+          const response = await axios.post(
+            `${baseUrl.replace(/\/$/, '')}/lite`,
+            { model: data.model, prompt: 'test', rsp_img_type: 'url' },
+            { headers: { 'Authorization': `Bearer ${data.apiKey}`, 'Content-Type': 'application/json' }, timeout: 15000 }
+          );
+          success = response.status === 200;
+          message = 'API 连接成功（腾讯混元 TokenHub）';
+        } else {
+          // 标准 API：验证 Key 格式（SecretId:SecretKey）
+          const parts = (data.apiKey || '').split(':');
+          if (parts.length < 2) {
+            message = '腾讯云 API Key 格式错误，请使用 SecretId:SecretKey 格式';
+          } else {
+            success = true;
+            message = 'API Key 格式正确（腾讯混元标准 API）';
+          }
+        }
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 400) {
+          success = true;
+          message = 'API 连接成功（腾讯混元 TokenHub）';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    } else {
+      // OpenAI compatible: send minimal text probe
+      let baseUrl = data.endpoint || 'https://api.openai.com/v1';
+      if (data.useProxy && data.proxyEndpoint) {
+        baseUrl = data.proxyEndpoint;
+      }
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (data.provider === 'openai') {
+        headers['Authorization'] = `Bearer ${data.apiKey}`;
+      } else if (data.provider === 'deepseek') {
+        headers['Authorization'] = `Bearer ${data.apiKey}`;
+      } else if (data.provider === 'xfyun') {
+        // 讯飞格式: APIKey:APISecret
+        headers['Authorization'] = `Bearer ${data.apiKey}`;
+      } else if (data.provider === 'tencent') {
+        headers['Authorization'] = `Bearer ${data.apiKey}`;
+      } else if (data.provider === 'custom') {
+        if (data.apiKey) {
+          headers['Authorization'] = `Bearer ${data.apiKey}`;
+        }
+      }
+      
+      // 判断是否为图像生成模型
+      const imageModelPatterns = /^(image|dall|z-image|flux|stable-diffusion|sd|midjourney|imagen)/i;
+      const isImageModel = imageModelPatterns.test(data.model);
+      
+      try {
+        if (isImageModel) {
+          // 图像生成模型：测试 /images/generations 端点
+          const response = await axios.post(
+            `${baseUrl}/images/generations`,
+            {
+              model: data.model,
+              prompt: 'A simple blue circle on white background',
+              n: 1,
+              size: '256x256',
+            },
+            { headers, timeout: 30000 }
+          );
+          success = response.status === 200 && response.data?.data;
+          message = 'API 连接成功（图像模型）';
+        } else {
+          // 聊天/文本模型：测试 /chat/completions 端点
+          const response = await axios.post(
+            `${baseUrl}/chat/completions`,
+            {
+              model: data.model,
+              messages: [{ role: 'user', content: '测试连接，请回复OK' }],
+              max_tokens: 10,
+            },
+            { headers, timeout: 15000 }
+          );
+          
+          success = response.status === 200 && response.data?.choices;
+          message = 'API 连接成功';
+        }
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          message = 'API Key 无效';
+        } else if (err.response?.status === 404) {
+          message = '模型不存在或无权访问';
+        } else if (err.code === 'ECONNREFUSED') {
+          message = '无法连接到 API 服务，请检查代理设置';
+        } else if (err.code === 'ETIMEDOUT') {
+          message = 'API 请求超时';
+        } else {
+          message = `连接失败: ${err.response?.data?.error?.message || err.message}`;
+        }
+      }
+    }
+    
+    res.json({ success, message });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
+    } else {
+      next(error);
+    }
+  }
+});
+
+// POST detect model capabilities (vision, text-to-image, image-to-image)
+router.post('/detect-capabilities', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { provider, apiKey, model, endpoint, useProxy, proxyEndpoint } = testConnectionSchema.parse(req.body);
+    console.log('[Detect Capabilities] Starting detection for:', provider, model);
+
+    const capabilities: string[] = [];
+    let category = 'text-to-image'; // 默认类型
+
+    // 构建请求配置
+    let baseUrl = endpoint || 'https://api.openai.com/v1';
+    if (useProxy && proxyEndpoint) {
+      baseUrl = proxyEndpoint;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // 根据 provider 设置鉴权
+    if (provider === 'google') {
+      baseUrl = useProxy && proxyEndpoint ? proxyEndpoint : 'https://generativelanguage.googleapis.com';
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    // 测试 1: 尝试 Vision 能力（发送带图片的请求）
+    if (provider !== 'google') {
+      try {
+        // 测试图片理解能力
+        const testImageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='; // 1x1 透明图片
+        
+        await axios.post(
+          `${baseUrl}/chat/completions`,
+          {
+            model: model,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Reply with OK' },
+                  { type: 'image_url', image_url: { url: `data:image/png;base64,${testImageBase64}`, detail: 'low' } }
+                ]
+              }
+            ],
+            max_tokens: 10,
+          },
+          { headers, timeout: 15000 }
+        );
+        
+        // 如果成功响应，说明支持 Vision
+        capabilities.push('vision', 'text');
+        category = 'vision';
+        console.log('[Detect Capabilities] Vision supported');
+      } catch (err: any) {
+        const errStr = err.response?.data?.error?.message || err.message || '';
+        
+        // 检查是否是 vision 相关的错误
+        if (errStr.includes('image_url') || errStr.includes('unknown variant') || errStr.includes('vision')) {
+          console.log('[Detect Capabilities] Vision not supported (expected for text-only models)');
+        } else if (err.response?.status === 401 || err.response?.status === 404) {
+          // API 错误，继续检测其他能力
+          console.log('[Detect Capabilities] Vision test failed, continuing...');
+        }
+      }
+    } else {
+      // Google Gemini 天然支持 vision
+      capabilities.push('vision', 'text');
+      category = 'vision';
+    }
+
+    // 测试 2: 尝试文生图能力（对于特定模型）
+    // 注意：文生图通常使用不同的 API 端点，这里通过错误信息推断
+    const imageGenModels = ['dall-e-3', 'dall-e-2', 'gpt-image-1', 'gpt-image-2', 'imagen-3', 'imagen-4', 'wanx', 'seedance', 'ernie-vilg', 'hy-image'];
+    if (imageGenModels.some(m => model.toLowerCase().includes(m))) {
+      capabilities.push('image-generation');
+      // 如果已经有 vision 能力，保持 vision
+      if (!capabilities.includes('vision')) {
+        category = 'image-to-image';
+      }
+    }
+
+    // 测试 3: 检查是否支持 image-editing（图生图）
+    const imageEditModels = ['gpt-image-1', 'gpt-image-2', 'wanx-v1', 'hy-image-v3.0'];
+    if (imageEditModels.some(m => model.toLowerCase().includes(m))) {
+      if (!capabilities.includes('image-editing')) {
+        capabilities.push('image-editing');
+      }
+    }
+
+    // 如果只有 text 能力
+    if (capabilities.length === 0) {
+      capabilities.push('text');
+    }
+
+    // 归一化 legacy 类别
+    if (category === 'image-understanding' || category === 'multimodal') {
+      category = 'vision';
+    }
+
+    console.log('[Detect Capabilities] Result:', { capabilities, category });
+
+    res.json({
+      success: true,
+      data: {
+        capabilities,
+        category,
+      }
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      res.status(400).json({ success: false, error: error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; ') });
+    } else {
+      next(error);
+    }
+  }
+});
+
+export default router;

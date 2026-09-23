@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vite/
+*.db
+*.backup
+.env
+.env.local
+.claude/settings.local.json

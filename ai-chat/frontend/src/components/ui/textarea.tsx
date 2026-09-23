@@ -1,0 +1,27 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> { minRows?: number; maxRows?: number; }
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, minRows = 1, maxRows = 10, style, ...props }, ref) => {
+    const lineHeight = 24;
+    const paddingVertical = 16;
+    const borderWidth = 2;
+    const minHeight = minRows * lineHeight + paddingVertical + borderWidth;
+    const maxHeight = maxRows * lineHeight + paddingVertical + borderWidth;
+    return (
+      <textarea
+        className={cn(
+          "flex w-full rounded-xl border border-gray-200/60 dark:border-gray-700/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:ring-offset-gray-950 dark:placeholder:text-gray-500 transition-colors duration-200 resize-y",
+          className
+        )}
+        ref={ref}
+        style={{ minHeight: `${minHeight}px`, maxHeight: `${maxHeight}px`, ...style }}
+        {...props}
+      />
+    );
+  }
+);
+Textarea.displayName = "Textarea";
+export { Textarea };
